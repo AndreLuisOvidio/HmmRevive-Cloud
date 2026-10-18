@@ -59,6 +59,7 @@ namespace HmmRevive
                         jobs.Add(new Job { Asset = sprite, File = Path.Combine(dir, $"skins/{car.Key}-{n}.jpg"), Uv = new Rect(0, 0, 1, 1), Width = 320 });
                 }
             }
+            Effects.List(); // hmmrevive-effects.txt for the launcher (effects have no pictures)
             List<ItemTypeScriptableObject> emotes = Emotes.List();
             for (int n = 0; n < emotes.Count; n++)
             {

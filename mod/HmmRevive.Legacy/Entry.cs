@@ -25,6 +25,9 @@ namespace HmmRevive.Legacy
 
         public static bool ServerMode { get; private set; }
 
+        /// <summary>Test: "on" moves the ball's carrier into its own goal now and then, "off" the same without the fix (OwnGoal.cs).</summary>
+        public static string TestOwnGoal { get; private set; }
+
         /// <summary>No audio output (FMOD NOSOUND): the server, and background test clients (--hmmrevive-mute).</summary>
         public static bool Mute { get; private set; }
 
@@ -106,6 +109,9 @@ namespace HmmRevive.Legacy
             _initialized = true;
             string[] args = Environment.GetCommandLineArgs();
             ServerMode = Flag(args, "--hmmrevive-server");
+            if (Flag(args, "--hmmrevive-test-own-goal")) TestOwnGoal = "on";
+            if (Flag(args, "--hmmrevive-test-own-goal=off")) TestOwnGoal = "off";
+            if (Flag(args, "--hmmrevive-test-own-goal=log")) TestOwnGoal = "log"; // only log the ball in a goal
             Mute = ServerMode || Flag(args, "--hmmrevive-mute");
             Connect = Flag(args, "--hmmrevive-connect");
             Wasd = Flag(args, "--hmmrevive-wasd");

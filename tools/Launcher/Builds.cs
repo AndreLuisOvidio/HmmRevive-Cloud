@@ -71,6 +71,63 @@ namespace HmmRevive.Launcher
         public static string KitVersion(string build) => Game.ModVersion(KitModDll(build));
         public static string InstanceVersion(string build) => Game.ModVersion(Path.Combine(Instance(build), "HMM_Data", "Managed", ModDll(build)));
 
+        // ---- old builds from Steam's own depot (1.6): the player runs download_depot in Steam's console with their own
+        // account (anyone who ever added the free game keeps its license); we ship nothing of the game and touch no Steam
+        // login. Steam puts the files in <Steam>\steamapps\content\app_331360\depot_331361, the same folder for every
+        // manifest, so "Add the download" first renames it to hmm-<build> next to it (same drive: instant), then sets it up.
+
+        public const string SteamApp = "331360", SteamDepot = "331361";
+
+        /// <summary>Manifest of each old build in the game's depot (SteamDB's manifest list); null = not known yet.</summary>
+        public static readonly Dictionary<string, string> Manifests = new Dictionary<string, string> { ["2017sep"] = null, ["2017"] = null };
+
+        public static string DepotFolder
+        {
+            get
+            {
+                // Tests (--test-background): a folder standing in for Steam's, so nothing is written there.
+                if (Game.TestBackground && Environment.GetEnvironmentVariable("HMMREVIVE_TEST_DEPOT_DIR") is string test) return test;
+                try
+                {
+                    using (var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Valve\Steam"))
+                        return key?.GetValue("SteamPath") is string steam
+                            ? Path.GetFullPath(Path.Combine(steam, "steamapps", "content", "app_" + SteamApp, "depot_" + SteamDepot)) : null;
+                }
+                catch { return null; }
+            }
+        }
+
+        /// <summary>The old builds the page offers to download (those with a known manifest), for Settings.</summary>
+        public static object[] DepotsJson()
+        {
+            if (Game.TestBackground && Environment.GetEnvironmentVariable("HMMREVIVE_TEST_MANIFESTS") is string tm) // "2017sep=123"
+                foreach (string kv in tm.Split(';')) if (kv.Contains("=") && Manifests.ContainsKey(kv.Split('=')[0])) Manifests[kv.Split('=')[0]] = kv.Split('=')[1];
+            string folder = DepotFolder;
+            bool downloaded = folder != null && File.Exists(Path.Combine(folder, "HMM.exe"));
+            string there = downloaded ? Detect(folder) : null;
+            return Legacy.Where(b => Manifests[b] != null).Select(b => (object)new Dictionary<string, object>
+            {
+                ["build"] = b, ["command"] = $"download_depot {SteamApp} {SteamDepot} {Manifests[b]}", ["folder"] = folder,
+                ["downloaded"] = there == b,
+            }).ToArray();
+        }
+
+        /// <summary>Renames the finished download to hmm-&lt;build&gt; and returns that folder (to set up like any copy).</summary>
+        public static string TakeDownload(string build)
+        {
+            if (!IsLegacy(build) || Manifests[build] == null) throw new Exception("That build can't be downloaded from Steam.");
+            string folder = DepotFolder;
+            if (folder == null || !File.Exists(Path.Combine(folder, "HMM.exe")))
+                throw new Exception("The download isn't there yet: wait until Steam's console says the depot download is complete.");
+            string there = Detect(folder);
+            if (there != build) throw new Exception("The download in Steam's folder is a different game build.");
+            string target = Path.Combine(Path.GetDirectoryName(folder), "hmm-" + build);
+            if (Directory.Exists(target)) throw new Exception($"{target} already exists: remove or rename it first.");
+            Directory.Move(folder, target);
+            Program.Log($"depot download of {build} moved to {target}");
+            return target;
+        }
+
         /// <summary>Builds whose game copy is set up here (the ones this player can host or join).</summary>
         public static List<string> ReadyBuilds() => new[] { Steam }.Concat(Legacy).Where(Ready).ToList();
 

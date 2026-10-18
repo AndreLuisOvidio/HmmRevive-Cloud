@@ -24,6 +24,7 @@ namespace HmmRevive.Legacy
             if (hub == null) return;
             MatchEnd.Tick(hub);
             Ball.Tick(hub);
+            OwnGoal.Tick(hub);
             GameState cur = hub.State != null ? hub.State.Current : null;
             if (cur is ServerGame) { if (_gameSince < 0f) _gameSince = Time.realtimeSinceStartup; }
             else _gameSince = -1f;

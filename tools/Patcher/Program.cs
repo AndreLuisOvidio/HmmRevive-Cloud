@@ -10,6 +10,11 @@
 // The game build is recognized by the sha256 of HMM_Data/Managed/Assembly-CSharp-firstpass.dll (Builds below). The
 // current (Steam) build is patched as above; a supported older build gets its own mod from <modDir>/<build>/ and its
 // own patch table (Legacy.cs). The first line of output is "build: <id>".
+//
+// HMM-Connect (the tool of another community server, Lonny's) changes the Steam folder: it writes user.config, swaps in
+// its own fixed Assembly-CSharp-firstpass.dll and Unity's fixed UnityPlayer.dll, keeping the originals as *.hmm-backup.
+// So the instance never links user.config or the backups, and the original firstpass is patched whenever there is a
+// backup of it: every player's copy runs the same code, whether or not they also play on that server.
 using System.Runtime.InteropServices;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
@@ -46,6 +51,7 @@ static class Program
             string rel = Path.GetRelativePath(game, src);
             if (rel.StartsWith("logs" + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) continue;
             if (rel.Equals(Path.Combine(managedRel, TargetDll), StringComparison.OrdinalIgnoreCase)) continue;
+            if (rel.Equals("user.config", StringComparison.OrdinalIgnoreCase) || rel.EndsWith(".hmm-backup", StringComparison.OrdinalIgnoreCase)) continue;
             string dst = Path.Combine(inst, rel);
             if (File.Exists(dst)) continue;
             Directory.CreateDirectory(Path.GetDirectoryName(dst));
@@ -57,6 +63,8 @@ static class Program
             File.Copy(src, dst);
         }
         Console.WriteLine($"hardlinked {linked} new files, copied {copied}");
+        foreach (string extra in new[] { Path.Combine(inst, "user.config"), Path.Combine(inst, managedRel, TargetDll + ".hmm-backup") })
+            if (File.Exists(extra)) { File.Delete(extra); Console.WriteLine($"removed {Path.GetRelativePath(inst, extra)} (another server's, not ours)"); }
 
         string managed = Path.Combine(inst, managedRel);
         foreach (string dll in Directory.EnumerateFiles(mod, "*.dll"))
@@ -67,7 +75,13 @@ static class Program
             Console.WriteLine($"copied mod {Path.GetFileName(dll)}");
         }
 
-        PatchPreStart(Path.Combine(game, managedRel, TargetDll), Path.Combine(managed, TargetDll), Path.Combine(managed, "HmmRevive.dll"));
+        string original = Path.Combine(game, managedRel, TargetDll);
+        if (File.Exists(original + ".hmm-backup"))
+        {
+            original += ".hmm-backup";
+            Console.WriteLine($"the game's {TargetDll} was replaced by HMM-Connect: patching its original ({TargetDll}.hmm-backup)");
+        }
+        PatchPreStart(original, Path.Combine(managed, TargetDll), Path.Combine(managed, "HmmRevive.dll"));
         return 0;
     }
 
@@ -107,10 +121,23 @@ static class Program
         var applyInstant = Target("HeavyMetalMachines.Combat.CombatController", "ApplyInstant");
         var getAmount = applyInstant.Body.Instructions.First(i => i.Operand is MethodReference mr && mr.Name == "get_Amount" && mr.DeclaringType.Name == "ModifierInstance");
         var ail = applyInstant.Body.GetILProcessor();
+        // ... then amount = ScaleCharge(amount, mod, this): the recharge stat on EPRepair modifiers (inserted first, ends up last)
+        ail.InsertAfter(getAmount, ail.Create(OpCodes.Call, Hook("HmmRevive.Hooks", "ScaleCharge")));
+        ail.InsertAfter(getAmount, ail.Create(OpCodes.Ldarg_0));
+        ail.InsertAfter(getAmount, ail.Create(OpCodes.Ldarg_1));
         ail.InsertAfter(getAmount, ail.Create(OpCodes.Call, Hook("HmmRevive.Hooks", "ScaleDamage")));
         ail.InsertAfter(getAmount, ail.Create(OpCodes.Ldarg_2));
         ail.InsertAfter(getAmount, ail.Create(OpCodes.Ldarg_1));
-        Console.WriteLine("  transform -> CombatController::ApplyInstant mod.Amount -> Hooks.ScaleDamage");
+        Console.WriteLine("  transform -> CombatController::ApplyInstant mod.Amount -> Hooks.ScaleDamage, Hooks.ScaleCharge");
+        // Recharge: CombatData.EPRegen returns ScaleEpRegen(regen, this)
+        var epRegen = Target("HeavyMetalMachines.Combat.CombatData", "get_EPRegen");
+        var eil = epRegen.Body.GetILProcessor();
+        foreach (var ret in epRegen.Body.Instructions.Where(i => i.OpCode == OpCodes.Ret).ToList())
+        {
+            eil.InsertBefore(ret, eil.Create(OpCodes.Ldarg_0));
+            eil.InsertBefore(ret, eil.Create(OpCodes.Call, Hook("HmmRevive.Hooks", "ScaleEpRegen")));
+        }
+        Console.WriteLine("  transform -> CombatData::get_EPRegen -> Hooks.ScaleEpRegen");
         // HP: in CombatData.HPMax, "+ _levelHPMax" -> "+ LevelHpMax(_levelHPMax, this)"
         var hpMax = Target("HeavyMetalMachines.Combat.CombatData", "get_HPMax");
         var levelHp = hpMax.Body.Instructions.Single(i => i.OpCode == OpCodes.Ldfld && i.Operand is FieldReference fr && fr.Name == "_levelHPMax");
@@ -132,6 +159,18 @@ static class Program
                      mil.Create(OpCodes.Call, Hook("HmmRevive.Hooks", "ScaleAcceleration")), mil.Create(OpCodes.Stloc, accel) })
             mil.InsertBefore(loadAccel, ins); // after "ldarg.0": a branch lands on that one
         Console.WriteLine("  transform -> CarMovement::MovementFixedUpdate accel -> Hooks.ScaleAcceleration");
+        // Throw after E (mod ThrowAfterE.cs): in CombatAttributes.Apply, "_currentStatus |= mod.Data.Status" ->
+        // "_currentStatus |= FilterStatus(mod.Data.Status, mod, this)"
+        var applyMod = module.GetType("HeavyMetalMachines.Combat.CombatAttributes").Methods.Single(m => m.Name == "Apply" && m.HasBody && m.Parameters.Count == 2 && m.Parameters[0].ParameterType.Name == "ModifierInstance");
+        var storeStatus = applyMod.Body.Instructions.First(i => i.OpCode == OpCodes.Stfld && i.Operand is FieldReference fr && fr.Name == "_currentStatus");
+        if (storeStatus.Previous.OpCode != OpCodes.Or) throw new InvalidOperationException("CombatAttributes.Apply: unexpected _currentStatus store");
+        var stil = applyMod.Body.GetILProcessor();
+        foreach (var ins in new[] { stil.Create(OpCodes.Ldarg_1), stil.Create(OpCodes.Ldarg_0), stil.Create(OpCodes.Call, Hook("HmmRevive.Hooks", "FilterStatus")) })
+            stil.InsertBefore(storeStatus.Previous, ins);
+        Console.WriteLine("  transform -> CombatAttributes::Apply mod.Data.Status -> Hooks.FilterStatus");
+        // Effects (mod/HmmRevive/Effects.cs): a test log of which customization effect item plays
+        Prologue(Target("HeavyMetalMachines.VFX.CustomizationHubMasterVFX", "Activate"), il => new[]
+            { il.Create(OpCodes.Ldarg_0), il.Create(OpCodes.Ldarg_1), il.Create(OpCodes.Ldarg_2), il.Create(OpCodes.Call, Hook("HmmRevive.Hooks", "EffectActivated")) });
         Prologue(Target("HeavyMetalMachines.Frontend.HudWindowManager", "GameState_ListenToStateChanged"), il => new[] { il.Create(OpCodes.Ldarg_0), il.Create(OpCodes.Call, Hook("HmmRevive.Hooks", "HudStateChanged")) });
 
         SkipIf(Target("HeavyMetalMachines.Windows.WindowsPlatform", "CheckSingleApplicationInstance"), Hook("HmmRevive.Hooks", "SkipSingleInstanceCheck"), OpCodes.Ldc_I4_1);

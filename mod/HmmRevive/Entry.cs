@@ -33,6 +33,9 @@ namespace HmmRevive
         /// <summary>Client: four emote numbers for the emote wheel (--hmmrevive-emotes=3,7,0,12), sent with the login. null = the first four.</summary>
         public static string Emotes { get; private set; }
 
+        /// <summary>The four effects (takeoff, respawn, takedown, score; numbers in hmmrevive-effects.txt, -1 = the game's), or null.</summary>
+        public static string Effects { get; private set; }
+
         /// <summary>Client: watch the match as a spectator (--hmmrevive-spectate): the game's narrator, no car. The server
         /// takes two (AuthenticationManager.FakeNarrator).</summary>
         public static bool Spectate { get; private set; }
@@ -54,6 +57,19 @@ namespace HmmRevive
 
         /// <summary>Test: log every HP hit the lobby's car stats change (--hmmrevive-log-damage, CarStats.cs).</summary>
         public static bool LogDamage { get; private set; }
+
+        /// <summary>Test: log every PassBlocked status a car gets (--hmmrevive-log-pass-blocked, ThrowAfterE.cs).</summary>
+        public static bool LogPassBlocked { get; private set; }
+        public static bool LogPassBlockedAll { get; private set; } // =all: every application, for durations
+
+        /// <summary>Test: effects for every bot (--hmmrevive-test-bot-effects=T,R,K,S, Effects.cs).</summary>
+        public static string TestBotEffects { get; private set; }
+
+        /// <summary>Test: log which item each customization effect plays (--hmmrevive-log-effects, Effects.cs).</summary>
+        public static bool LogEffects { get; private set; }
+
+        /// <summary>Test: log EP gains and regen rates (--hmmrevive-log-charge, CarStats.cs).</summary>
+        public static bool LogCharge { get; private set; }
 
         /// <summary>Chaos only picks from these car ids (--hmmrevive-chaos-cars=8,7), e.g. to repeat one swap pair. null = any car.</summary>
         public static int[] ChaosCars { get; private set; }
@@ -170,11 +186,14 @@ namespace HmmRevive
             string emotes = Array.Find(args, a => a.StartsWith("--hmmrevive-emotes=", StringComparison.OrdinalIgnoreCase));
             if (emotes != null) Emotes = System.Text.RegularExpressions.Regex.Replace(emotes.Substring("--hmmrevive-emotes=".Length), "[^0-9,]", "");
             if (Emotes == "") Emotes = null;
+            string effects = Array.Find(args, a => a.StartsWith("--hmmrevive-effects=", StringComparison.OrdinalIgnoreCase));
+            if (effects != null) Effects = System.Text.RegularExpressions.Regex.Replace(effects.Substring("--hmmrevive-effects=".Length), "[^0-9,-]", "");
+            if (Effects == "") Effects = null;
             string dump = Array.Find(args, a => a.StartsWith("--hmmrevive-dump-images=", StringComparison.OrdinalIgnoreCase));
             if (dump != null) DumpImages = dump.Substring("--hmmrevive-dump-images=".Length).Trim('"', '\'', ' ');
             AutoEmote = Array.Exists(args, a => a.Equals("--hmmrevive-autoemote", StringComparison.OrdinalIgnoreCase));
             Spectate = Array.Exists(args, a => a.Equals("--hmmrevive-spectate", StringComparison.OrdinalIgnoreCase));
-            if (Spectate) Car = Skin = Team = Emotes = null;
+            if (Spectate) Car = Skin = Team = Emotes = Effects = null;
             string endQuit = Array.Find(args, a => a.StartsWith("--hmmrevive-end-quit=", StringComparison.OrdinalIgnoreCase));
             if (endQuit != null) EndQuitDelay = float.Parse(endQuit.Substring("--hmmrevive-end-quit=".Length), System.Globalization.CultureInfo.InvariantCulture);
             string cooldown = Array.Find(args, a => a.StartsWith("--hmmrevive-cooldown=", StringComparison.OrdinalIgnoreCase));
@@ -187,6 +206,13 @@ namespace HmmRevive
             Chaos = Array.Exists(args, a => a.Equals("--hmmrevive-chaos", StringComparison.OrdinalIgnoreCase));
             ScanHeal = Array.Exists(args, a => a.Equals("--hmmrevive-scan-heal", StringComparison.OrdinalIgnoreCase));
             LogDamage = Array.Exists(args, a => a.Equals("--hmmrevive-log-damage", StringComparison.OrdinalIgnoreCase));
+            LogCharge = Array.Exists(args, a => a.Equals("--hmmrevive-log-charge", StringComparison.OrdinalIgnoreCase));
+            LogEffects = Array.Exists(args, a => a.Equals("--hmmrevive-log-effects", StringComparison.OrdinalIgnoreCase));
+            LogPassBlocked = Array.Exists(args, a => a.Equals("--hmmrevive-log-pass-blocked", StringComparison.OrdinalIgnoreCase));
+            LogPassBlockedAll = Array.Exists(args, a => a.Equals("--hmmrevive-log-pass-blocked=all", StringComparison.OrdinalIgnoreCase));
+            LogPassBlocked |= LogPassBlockedAll;
+            string botEffects = Array.Find(args, a => a.StartsWith("--hmmrevive-test-bot-effects=", StringComparison.OrdinalIgnoreCase));
+            if (botEffects != null) TestBotEffects = botEffects.Substring("--hmmrevive-test-bot-effects=".Length);
             string chaosCars = Array.Find(args, a => a.StartsWith("--hmmrevive-chaos-cars=", StringComparison.OrdinalIgnoreCase));
             if (chaosCars != null)
             {

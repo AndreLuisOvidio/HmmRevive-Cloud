@@ -28,6 +28,18 @@ namespace HmmRevive.Launcher
             get { Version v = typeof(Program).Assembly.GetName().Version; return v.Major + "." + v.Minor; }
         }
 
+        /// <summary>The release this kit is, as tagged on GitHub without the v: "1.6", "1.6-preview", "1.6-preview.2".</summary>
+        public static string Release
+        {
+            get
+            {
+                var a = (AssemblyInformationalVersionAttribute)Attribute.GetCustomAttribute(typeof(Program).Assembly, typeof(AssemblyInformationalVersionAttribute));
+                return a != null && a.InformationalVersion.StartsWith(Version) ? a.InformationalVersion : Version;
+            }
+        }
+
+        public static bool IsPreview => Release.Contains("-");
+
         private static readonly object LogGate = new object();
         private static string _logFile;
 
@@ -42,17 +54,23 @@ namespace HmmRevive.Launcher
         }
 
         private static int _uiPort, _lobbyPort = 9697, _gamePort = 9696;
+        private static HttpServer _uiServer;
         public static int TestScore;
         private static Lobby _lobby;
         private static Session _session;
         private static readonly object Gate = new object();
         private static string _notice = "";
 
+        private static string[] _args;
+        private static string _exe; // _exe: as started (an update moves the running exe away)
+
         public static int Main(string[] args)
         {
+            _args = args;
+            _exe = Paths.LauncherExe;
             string root = null, instance = "instance", settings = null;
             int wantUi = 9690;
-            bool browser = true;
+            bool browser = true, afterUpdate = false, updateCheck = true;
             for (int i = 0; i < args.Length; i++)
             {
                 string Next() => i + 1 < args.Length ? args[++i] : "";
@@ -67,6 +85,9 @@ namespace HmmRevive.Launcher
                     case "--no-browser": browser = false; break;
                     case "--test-background": Game.TestBackground = true; break;
                     case "--test-score": TestScore = int.Parse(Next()); break;
+                    case "--after-update": afterUpdate = true; break; // restarted by the updater: the page is already open
+                    case "--update-url": Updater.ReleasesUrl = Next(); break; // tests: a local copy of the releases API
+                    case "--no-update-check": updateCheck = false; break;
                 }
             }
             Console.Title = "HMM Revive " + Version;
@@ -74,10 +95,18 @@ namespace HmmRevive.Launcher
             if (settings != null) Paths.Settings = settings;
             Catalog.Load();
             Settings.Load();
+            Updater.CleanUp();
 
             // Take the first free port. A taken one may be this launcher already running (opened twice): then just show it.
             HttpServer ui = null;
-            foreach (int p in Candidates(wantUi))
+            // After an update the old launcher has just let go of its port: wait for it, so the open page carries on.
+            for (int tries = afterUpdate ? 20 : 0; tries > 0 && ui == null; tries--)
+            {
+                ui = new HttpServer(IPAddress.Loopback, wantUi, HandleLocal);
+                if (ui.Start()) browser = false;
+                else { ui = null; Thread.Sleep(250); }
+            }
+            foreach (int p in ui != null ? new int[0] : Candidates(wantUi))
             {
                 ui = new HttpServer(IPAddress.Loopback, p, HandleLocal);
                 if (ui.Start()) break;
@@ -99,6 +128,7 @@ namespace HmmRevive.Launcher
                 ui = new HttpServer(IPAddress.Loopback, 0, HandleLocal);
                 ui.Start();
             }
+            _uiServer = ui;
             _uiPort = ui.Port;
             _logFile = Path.ChangeExtension(Paths.Settings, ".log"); // launcher-settings.log, fresh each start
             try { File.Delete(_logFile); } catch { }
@@ -109,12 +139,31 @@ namespace HmmRevive.Launcher
             Console.WriteLine();
             Log($"root={Paths.Root} instance={Paths.Instance} ui={_uiPort} lobby={_lobbyPort} game={_gamePort}");
             if (browser) Browser.Open(url);
+            if (updateCheck && Updater.CanUpdate) Updater.Check();
             while (true)
             {
                 Firewall.Refresh(); // netsh is slow; the page reads the cached answer
                 Thread.Sleep(30000);
             }
             return 0;
+        }
+
+        /// <summary>
+        /// Starts the updated launcher with the same arguments on the same page port and quits: the page that is open
+        /// reconnects to it and reloads itself (its version changed).
+        /// </summary>
+        public static void Restart()
+        {
+            var args = new List<string>();
+            for (int i = 0; i < _args.Length; i++)
+                if (_args[i] == "--ui-port") i++;
+                else if (_args[i] != "--after-update") args.Add(_args[i]);
+            args.AddRange(new[] { "--ui-port", _uiPort.ToString(), "--after-update" });
+            _uiServer.Stop();
+            // Not through the shell: the new launcher keeps this console window (it stays while a process uses it).
+            Process.Start(new ProcessStartInfo(_exe, string.Join(" ", args.Select(a => a.Contains(" ") ? "\"" + a + "\"" : a)))
+                { WorkingDirectory = Paths.Root, UseShellExecute = false });
+            Environment.Exit(0);
         }
 
         private static IEnumerable<int> Candidates(int first) => Enumerable.Range(0, 6).Select(i => first - i);
@@ -137,6 +186,7 @@ namespace HmmRevive.Launcher
             {
                 case "/api/hello": return Response.Json(new Dictionary<string, object> { ["app"] = "hmmrevive-launcher", ["settings"] = Paths.Settings });
                 case "/api/catalog": return Response.Json(Catalog.ToJson());
+                case "/api/effects": return Response.Json(Game.EffectsList());
                 case "/api/state": return Response.Json(State());
                 case "/api/settings": return SaveSettings(d);
                 case "/api/discover": return Response.Json(new Dictionary<string, object> { ["lobbies"] = Discovery.Find(_lobbyPort).ToArray() });
@@ -230,11 +280,64 @@ namespace HmmRevive.Launcher
                     return Ok(new Dictionary<string, object> { ["file"] = Game.BrowseForGame() });
                 case "/api/firewall":
                     return Ok(new Dictionary<string, object> { ["ok"] = Firewall.Setup(_gamePort, _lobbyPort) });
+                case "/api/update/check":
+                    Updater.Check();
+                    return Ok();
+                case "/api/update/apply":
+                {
+                    if (_lobby != null || _session != null) return Response.Error("Leave the lobby before updating.");
+                    string err = Updater.Apply();
+                    return err == null ? Ok() : Response.Error(err);
+                }
+                case "/api/depot/console":
+                    Process.Start(new ProcessStartInfo("steam://open/console") { UseShellExecute = true });
+                    return Ok();
+                case "/api/depot/add":
+                {
+                    string build = d.Str("build");
+                    string dir = Builds.TakeDownload(build);
+                    var copies = Settings.Data.Obj("copies") ?? new Dictionary<string, object>();
+                    copies[build] = dir;
+                    Settings.Data["copies"] = copies;
+                    Settings.Save();
+                    Game.RunSetup(build, dir);
+                    return Ok();
+                }
+                case "/api/online/play":
+                {
+                    string err = Online.Play();
+                    return err == null ? Ok() : Response.Error(err);
+                }
+                case "/api/online/discord":
+                    Online.OpenDiscord();
+                    return Ok();
                 case "/api/open-folder":
                     Process.Start("explorer.exe", "\"" + Paths.Root + "\"");
                     return Ok();
             }
             return null;
+        }
+
+        /// <summary>
+        /// The host's balance presets (the page saves the whole list): a name and what the lobby's match settings would get
+        /// from it (ball speed, ability cooldowns, car stats), cleaned the same way.
+        /// </summary>
+        private static List<object> CleanPresets(IEnumerable<object> list)
+        {
+            var clean = new List<object>();
+            foreach (var p in list.OfType<Dictionary<string, object>>())
+            {
+                string name = new string((p.Str("name") ?? "").Where(ch => !char.IsControl(ch)).ToArray()).Trim();
+                if (name.Length > 40) name = name.Substring(0, 40);
+                if (name.Length == 0 || clean.Cast<Dictionary<string, object>>().Any(x => string.Equals(x.Str("name"), name, StringComparison.OrdinalIgnoreCase))) continue;
+                clean.Add(new Dictionary<string, object>
+                {
+                    ["name"] = name, ["ballSpeed"] = Math.Max(50, Math.Min(300, p.Int("ballSpeed", 100))),
+                    ["cooldown"] = Lobby.CleanCooldown(p.Str("cooldown")), ["carStats"] = Game.CleanCarStats(p.Obj("carStats") ?? new Dictionary<string, object>()),
+                });
+                if (clean.Count == 100) break;
+            }
+            return clean;
         }
 
         private static Response SaveSettings(Dictionary<string, object> d)
@@ -262,12 +365,21 @@ namespace HmmRevive.Launcher
                 if (picks.Count != 4 || picks.Any(n => n < 0 || (count > 0 && n >= count))) return Response.Error("Pick four emotes.");
                 Settings.Data["emotes"] = picks.Cast<object>().ToList();
             }
+            if (d.ContainsKey("effects"))
+            {
+                var picks = d.List("effects").Select(o => int.TryParse(o?.ToString(), out int n) ? n : -2).ToList();
+                if (picks.Count != 4 || picks.Any(n => n < -1 || n > 999)) return Response.Error("Pick four effects.");
+                Settings.Data["effects"] = picks.Cast<object>().ToList();
+            }
             if (d.ContainsKey("width")) Settings.Data["width"] = Math.Max(0, d.Int("width"));
             if (d.ContainsKey("height")) Settings.Data["height"] = Math.Max(0, d.Int("height"));
             if (d.ContainsKey("fullscreen")) Settings.Data["fullscreen"] = d.Bool("fullscreen", true);
             if (Builds.Legacy.Contains(d.Str("hostBuild")) || d.Str("hostBuild") == Builds.Steam) Settings.Data["hostBuild"] = d.Str("hostBuild");
             if (d.ContainsKey("showNov")) Settings.Data["showNov"] = d.Bool("showNov", false); // Nov 2017 build in the Host list
+            if (d.ContainsKey("previewUpdates")) Settings.Data["previewUpdates"] = d.Bool("previewUpdates", false); // offer preview releases
             if (d.Str("lang") == "en" || d.Str("lang") == "pt") Settings.Data["lang"] = d.Str("lang"); // page language
+            if (d.Str("drive") == "mouse" || d.Str("drive") == "wasd") Settings.Data["drive"] = d.Str("drive"); // how I drive on the 2017 builds
+            if (d.ContainsKey("presets")) Settings.Data["presets"] = CleanPresets(d.List("presets"));
             Settings.Save();
             _session?.SendChoices(null); // car/skin changes show in the lobby
             return Ok();
@@ -358,6 +470,7 @@ namespace HmmRevive.Launcher
             return new Dictionary<string, object>
             {
                 ["version"] = Version,
+                ["release"] = Release,
                 ["settings"] = Settings.Data,
                 ["root"] = Paths.Root,
                 ["instance"] = Paths.Instance,
@@ -370,6 +483,7 @@ namespace HmmRevive.Launcher
                 ["setupStatus"] = Game.SetupStatus,
                 ["setupBuild"] = Game.SetupBuild,
                 ["copies"] = Builds.CopiesJson(),
+                ["depots"] = Builds.DepotsJson(),
                 ["builds"] = Builds.ReadyBuilds().ToArray(),
                 ["hostBuild"] = _lobby?.Build,
                 ["setupLog"] = setupLog.Length > 4000 ? setupLog.Substring(setupLog.Length - 4000) : setupLog,
@@ -387,6 +501,15 @@ namespace HmmRevive.Launcher
                 ["firewall"] = Firewall.Cached,
                 ["lobbyPort"] = _lobbyPort,
                 ["gamePort"] = _gamePort,
+                ["onlineConnected"] = Online.Connected,
+                ["canUpdate"] = Updater.CanUpdate,
+                ["previewUpdates"] = Updater.WantPreview,
+                ["updateStatus"] = Updater.Status,
+                ["updateVersion"] = Updater.LatestVersion,
+                ["updateNotes"] = Updater.ReleaseNotes,
+                ["updateUrl"] = Updater.ReleaseUrl,
+                ["updatePreview"] = Updater.IsPreview,
+                ["updatePercent"] = Updater.DownloadPercent,
             };
         }
 

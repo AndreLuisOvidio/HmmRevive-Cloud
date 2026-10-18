@@ -315,6 +315,14 @@ static class Legacy
             Console.WriteLine("  redirect -> CombatController impulse Movement.Push -> Ball.Push");
         }
         else Console.WriteLine($"  (CombatController has {impulse?.Count ?? 0} Movement.Push calls: ball impulses unchanged)");
+        // No own goal while your team carries the ball (mod OwnGoal.cs): if (SkipOwnGoal(this, other)) return;
+        var goalStay = Target("HeavyMetalMachines.Combat.BombTargetTrigger", "OnTriggerStay");
+        var goalFirst = goalStay.Body.Instructions[0];
+        var gil = goalStay.Body.GetILProcessor();
+        foreach (var ins in new[] { gil.Create(OpCodes.Ldarg_0), gil.Create(OpCodes.Ldarg_1), gil.Create(OpCodes.Call, Hook("SkipOwnGoal")),
+                     gil.Create(OpCodes.Brfalse, goalFirst), gil.Create(OpCodes.Ret) })
+            gil.InsertBefore(goalFirst, ins);
+        Console.WriteLine("  skip-if SkipOwnGoal -> BombTargetTrigger::OnTriggerStay");
         foreach (var (name, hook) in new[] { ("ReceiveMessage", "ServerChat"), ("ClientReceiveMessage", "ClientChat") })
         {
             var chat = module.GetType("HeavyMetalMachines.HMMChat.ChatService")?.Methods.SingleOrDefault(m => m.Name == name && m.HasBody);

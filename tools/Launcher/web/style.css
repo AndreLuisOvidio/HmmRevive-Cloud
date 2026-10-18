@@ -25,6 +25,8 @@ body {
   font: 14px/1.5 "Segoe UI", system-ui, sans-serif;
   min-height: 100vh;
 }
+.presets { margin: 0.25rem 0 0.75rem; padding: 0.75rem; background: var(--panel-2); border-radius: var(--radius); border: 1px solid var(--line); }
+.presets .row { flex-wrap: wrap; margin: 6px 0; }
 .car-stats { margin: 0.75rem 0 1rem; padding: 0.75rem; background: var(--panel-2); border-radius: var(--radius); border: 1px solid var(--line); }
 .car-stats h3 { margin: 0 0 0.35rem; font-size: 0.95rem; }
 .car-stats > label { margin-bottom: 8px; }
@@ -34,7 +36,7 @@ body {
 }
 .car-stat-list { min-width: 100%; }
 .car-stat-head, .car-stat-row {
-  display: grid; grid-template-columns: minmax(6.5rem, 1.35fr) repeat(3, minmax(5.5rem, 1fr));
+  display: grid; grid-template-columns: minmax(6.5rem, 1.35fr) repeat(4, minmax(5.5rem, 1fr));
   gap: 0.25rem 0.45rem; align-items: center; padding: 0.35rem 0.55rem;
 }
 .car-stat-head {
@@ -351,3 +353,7 @@ p.banner { display: block; }
 .emote-grid .emote img { width: 52px; height: 52px; }
 .emote-grid .emote.cur { border-color: var(--ok); }
 @media (max-width: 500px) { .skin-pic { width: 120px; height: 78px; } }
+.banner details { margin-top: 8px; }
+.banner details summary { cursor: pointer; }
+code.cmd { user-select: all; padding: 4px 8px; background: var(--panel-2); border-radius: 6px; word-break: break-all; }
+pre.changelog { max-height: 240px; overflow: auto; white-space: pre-wrap; font: inherit; font-size: 13px; margin: 8px 0 0; }

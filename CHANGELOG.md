@@ -2,9 +2,50 @@
 
 Newest first. The version is shown on the first line of every kit window (setup, play, host).
 
-## 1.5 (2026-10-09)
+## 1.6 (2026-10-18)
 
-Preview. Thanks to AndreLuisOvidio and DantasB for the first two community contributions.
+Preview. Thanks to AndreLuisOvidio for the automatic updates, and to Lonny for his help with the HMM Private Club.
+
+- **Automatic updates** (by AndreLuisOvidio): the launcher looks for a newer HMM Revive on GitHub each time it starts.
+  When there is one, a banner shows what's new and "Update now" downloads it, checks it and updates the kit folder in
+  place (your settings and game copies stay), then the launcher restarts and the page reloads by itself. Settings has an
+  Updates section with "Check for updates" and "Check for preview versions" (on by default in a preview kit). This
+  works from 1.6 on: to get 1.6 itself, download the kit once more as usual.
+- **Recharge** in the lobby's car stats, next to HP, move speed and damage: how fast each car charges its ultimate, from
+  10% to 300% (for example Stingray at 70%). Both ways the meter fills are scaled: over time and from hitting. It's in
+  balance presets and `HMMR1:` codes too (codes made in 1.5 still work). Steam version.
+- **Effects**: in Settings, pick the effect for when your car leaves the base, respawns, destroys a car and scores, from
+  the game's own (battle passes, events and store: about 50 of each). Everyone in the match sees them. Steam version.
+- **HMM Private Club**: the Play page has a card for Lonny's server (the game's online menus and matchmaking).
+  "Play on HMM Private Club" starts your Steam copy of the game, once the club's HMM-Connect has connected it; otherwise
+  the card links to the club's Discord, where HMM-Connect is. HMM Revive's own copy isn't affected, so you can play both:
+  after HMM-Connect, "Update game copy" in HMM Revive keeps working.
+- **Old versions from Steam**: Settings explains how to download an old version of the game with your own Steam account
+  (a command for Steam's console, then "Add the download"). Not in this preview yet: it shows up once the old
+  versions' download ids are confirmed, in a later update.
+- **No own goals on the 2017 versions** while your team carries the ball in your own goal, like the Steam version (a
+  ball thrown or dropped into your own goal still counts, as on Steam). Not tested in a real match yet: tell us how it
+  plays.
+- Everyone in a lobby needs HMM Revive 1.6.
+
+## 1.5 (2026-10-13)
+
+Thanks to AndreLuisOvidio and DantasB for the first two community contributions.
+
+New since the 1.5 preview:
+
+- **Balance presets:** the lobby's match settings now start with "Balance preset". A preset keeps the ball speed, the
+  ability cooldowns and the car stats together, so a tournament's rules are one click instead of moving every slider
+  again. "Save as preset…" keeps the current settings under a name, and picking a preset in the list puts them back
+  ("Normal" = the game's own). "Copy code" copies a short code (it starts with `HMMR1:`) to share in Discord or the
+  chat; "Paste code…" adds someone else's preset to your list and uses it. The 2017 versions use only the ball speed.
+- **Each player picks how they drive on the 2017 versions.** The host's "Drive with WASD (everyone)" is gone: in
+  Settings (and in the lobby, next to Ready) every player picks "Mouse" (the game's own: left button forward, right
+  button reverse, the car turns towards the cursor) or "Keyboard: WASD" (like the Steam version; the mouse buttons
+  still work for speed). Mouse and keyboard players play together in the same match. Going back to Mouse also puts
+  the game's own mouse driving back.
+
+The rest of 1.5 (from the preview):
 
 - **Ability cooldowns** (by AndreLuisOvidio): the host can set every car's ability cooldown in the lobby's match
   settings ("Ability cooldowns": 0.1 to 5 seconds, or the game's own). It applies to both weapons, the special and the
@@ -12,9 +53,6 @@ Preview. Thanks to AndreLuisOvidio and DantasB for the first two community contr
 - **Car stats** (by DantasB): the host can change HP, move speed and damage, from 10% to 300%, for every car at once
   (top row) or for single cars, in the lobby's match settings. Damage stays normal while a car holds the ball. Steam
   version.
-- **Drive with WASD on the 2017 versions:** a host option in the lobby ("Drive with WASD"). The 2017 versions drive
-  with the mouse (hold the left button to go forward, the right one to reverse, the car turns towards the cursor).
-  Ticked, every player drives like in the Steam game: W/S for speed, A/D to steer.
 - **Ball droppers you can see on Metal God Arena (2017 versions):** the red and blue droppers that make you drop the
   ball were only partly drawn, and some were invisible, so you could lose the ball on what looked like bare floor. Now
   every dropper glows in its team's colour exactly where it is.

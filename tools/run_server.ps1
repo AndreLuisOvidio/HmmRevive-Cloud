@@ -11,8 +11,11 @@ param(
     [string]$BluBotCars = "",
     [switch]$SameTeam, # all humans on Blue (then use -BluBots 4-humans); default alternates humans Red/Blue
     [int]$Score = 0,   # points to win (0 = default 3); pass the same -Score to clients
-    [string]$CarStats = "", # car HP/move/damage %, e.g. "default:100,120,100;8:150,100,100"; pass the same -CarStats to clients
+    [string]$CarStats = "", # car HP/move/damage/recharge %, e.g. "default:100,120,100,100;8:150,100,100,80"; pass the same -CarStats to clients
     [switch]$LogDamage, # test: log every hit the car stats change
+    [switch]$LogCharge, # test: log every ultimate (EP) gain and each car's EP regen
+    [switch]$LogPassBlocked, # test: log every PassBlocked status (cars that can't throw the ball)
+    [string]$BotEffects = "", # test: takeoff,respawn,takedown,score effect numbers for every bot (hmmrevive-effects.txt)
     [string]$Cooldown = "", # every car's ability cooldown in seconds, e.g. "0.1" (empty = the game's own); pass the same -Cooldown to clients
     [switch]$Graphics, # run with a GPU device (no -nographics) if headless mode breaks something
     [switch]$ScanHeal, # test: log everything in the match that can heal (HealScan.cs)
@@ -34,6 +37,9 @@ if ($Score -gt 0) { $a += "--hmmrevive-score=$Score" }
 if ($Cooldown) { $a += "--hmmrevive-cooldown=$Cooldown" }
 if ($CarStats) { $a += "--hmmrevive-car-stats=$CarStats" }
 if ($LogDamage) { $a += "--hmmrevive-log-damage" }
+if ($LogCharge) { $a += "--hmmrevive-log-charge" }
+if ($LogPassBlocked) { $a += "--hmmrevive-log-pass-blocked=all" }
+if ($BotEffects) { $a += "--hmmrevive-test-bot-effects=$BotEffects" }
 if ($Chaos) { $a += "--hmmrevive-chaos" }
 if ($ScanHeal) { $a += "--hmmrevive-scan-heal" }
 if ($EndQuit -ge 0) { $a += "--hmmrevive-end-quit=$EndQuit" }

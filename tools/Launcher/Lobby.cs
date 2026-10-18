@@ -57,9 +57,8 @@ namespace HmmRevive.Launcher
         public string Message = "";
         public int Arena = 1, Score = 3;
         public int BallSpeed = 100; // percent, 50-300; the host may change it during the match too
-        public Dictionary<string, object> CarStats = Game.CleanCarStats(null); // HP/move/damage % per car id or "default" (Steam build only)
+        public Dictionary<string, object> CarStats = Game.CleanCarStats(null); // HP/move/damage/recharge % per car id or "default" (Steam build only)
         public bool AutoStart = true;
-        public bool Wasd; // old builds: everyone drives with WASD instead of the game's mouse buttons (mod Drive.cs)
         public bool Spectators, DraftOn;
         public string DraftBans = Draft.DefaultBans, DraftPicks = Draft.DefaultPicks;
         public int DraftTime = Draft.DefaultTurnSeconds; // seconds per draft turn, 0 = no limit
@@ -124,7 +123,6 @@ namespace HmmRevive.Launcher
             Score = Math.Max(1, h.Int("score", Score));
             BallSpeed = Math.Max(50, Math.Min(300, h.Int("ballSpeed", BallSpeed)));
             AutoStart = h.Bool("autoStart", AutoStart);
-            Wasd = h.Bool("wasd", Wasd);
             Spectators = h.Bool("spectators", Spectators);
             DraftOn = h.Bool("draft", DraftOn);
             // (1.3 preview had one "draftOrder" for bans and picks; its default was wrong, so it isn't read.)
@@ -161,7 +159,7 @@ namespace HmmRevive.Launcher
 
         public Dictionary<string, object> SetupJson()
         {
-            var d = new Dictionary<string, object> { ["arena"] = Arena, ["score"] = Score, ["ballSpeed"] = BallSpeed, ["autoStart"] = AutoStart, ["wasd"] = Wasd, ["spectators"] = Spectators, ["draft"] = DraftOn,
+            var d = new Dictionary<string, object> { ["arena"] = Arena, ["score"] = Score, ["ballSpeed"] = BallSpeed, ["autoStart"] = AutoStart, ["spectators"] = Spectators, ["draft"] = DraftOn,
                 ["draftBans"] = DraftBans, ["draftPicks"] = DraftPicks, ["draftTime"] = DraftTime, ["cooldown"] = Cooldown, ["carStats"] = CarStats };
             foreach (var t in Teams)
                 d[t.Key] = new Dictionary<string, object> { ["bots"] = t.Value.Bots, ["difficulty"] = t.Value.Difficulty, ["cars"] = t.Value.Cars.ToArray() };
@@ -667,7 +665,6 @@ namespace HmmRevive.Launcher
                     ["ballSpeed"] = BallSpeed,
                     ["score"] = Score,
                     ["carStats"] = Builds.IsLegacy(Build) ? null : Game.CompactCarStats(CarStats),
-                    ["wasd"] = Builds.IsLegacy(Build) && Wasd,
                     ["autoStart"] = AutoStart,
                     ["spectators"] = SpectatorsOn,
                     ["spectatorSeatsFreeing"] = Freeing,

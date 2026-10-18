@@ -22,6 +22,8 @@ param(
     [int]$Shots = 0,        # tests: N off-screen pictures of the match (hmmrevive-shot-<pid>-<n>.png next to HMM.exe)
     [string]$AutoChat = "", # tests: chat lines sent 3 s after the match starts, ';'-separated, e.g. "/cars;/car wildfire"
     [string]$Emotes = "",   # four emote numbers for the emote wheel (hmmrevive-emotes.txt), e.g. 3,7,0,12; empty = the first four
+    [switch]$LogEffects,    # test: log which item each takeoff/respawn/takedown/score effect plays
+    [string]$Effects = "",  # takeoff,respawn,takedown,score effect numbers (hmmrevive-effects.txt), -1 = the game's; empty = all the game's
     [switch]$AutoEmote,     # tests: play each emote once, from 5 s into the match
     [string]$DumpImages = "" # write skin/emote pictures for the launcher into this folder, then quit (no match)
 )
@@ -39,6 +41,8 @@ if ($Team) { $a += "--hmmrevive-team=$Team" }
 if ($Spectate) { $a += "--hmmrevive-spectate" }
 if ($Shots -gt 0) { $a += "--hmmrevive-shots=$Shots" }
 if ($Emotes) { $a += "--hmmrevive-emotes=$Emotes" }
+if ($Effects) { $a += "--hmmrevive-effects=$Effects" }
+if ($LogEffects) { $a += "--hmmrevive-log-effects" }
 if ($DumpImages) { $a += "`"--hmmrevive-dump-images=$DumpImages`"" }
 if ($AutoEmote) { $a += "--hmmrevive-autoemote" }
 if ($AutoChat) { $a += "`"--hmmrevive-autochat=$AutoChat`"" }

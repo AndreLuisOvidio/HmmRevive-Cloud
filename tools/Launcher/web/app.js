@@ -15,6 +15,8 @@ let emoteSlot = -1;    // Settings: the emote slot being changed (0-3), -1 = non
 const DIFFS = () => [["auto", t("diff_auto")], ["easy", t("diff_easy")], ["medium", t("diff_medium")], ["hard", t("diff_hard")]];
 const DRAFT_TIMES = [0, 30, 45, 60, 90, 120]; // seconds per draft turn; 0 = no limit
 const COOLDOWNS = ["", "0.1", "0.25", "0.5", "1", "2", "3", "5"]; // seconds for every car's abilities; "" = the game's own
+// How a player drives on the 2017 builds: each player's own setting (passed to their own game only).
+const DRIVES = () => [["mouse", t("drive_mouse")], ["wasd", t("drive_wasd")]];
 const SCORES = () => [["1", t("score_1")], ["2", "2"], ["3", t("score_3")], ["4", "4"], ["5", "5"]];
 const RESOLUTIONS = [[1280, 720], [1600, 900], [1920, 1080], [2560, 1440], [3840, 2160]];
 
@@ -113,9 +115,12 @@ const joinAddresses = () => {
   return vpn.length ? vpn : S.addresses.filter((a) => a.kind === "LAN").slice(0, 1);
 };
 const carOptions = () => C.cars.map((c) => [String(c.id), c.name]);
+// The balance stats per car, in column order (recharge = how fast the ultimate fills, since 1.6).
+const STATS = ["hp", "move", "damage", "charge"];
+const vanillaStats = () => ({ hp: 100, move: 100, damage: 100, charge: 100 });
 const ensureCarStats = (H) => {
-  if (!H.carStats) H.carStats = { default: { hp: 100, move: 100, damage: 100 } };
-  if (!H.carStats.default) H.carStats.default = { hp: 100, move: 100, damage: 100 };
+  if (!H.carStats) H.carStats = { default: vanillaStats() };
+  if (!H.carStats.default) H.carStats.default = vanillaStats();
 };
 const statMultStr = (mult) => {
   if (mult <= 0) return "0×";
@@ -134,7 +139,7 @@ const syncStatRangeUi = (input) => {
 };
 const carStatRows = () => [{ id: "default", name: t("car_stats_default") }, ...C.cars.map((c) => ({ id: String(c.id), name: c.name }))];
 const effectiveCarStat = (H, carId, field) => {
-  const d = H.carStats.default || { hp: 100, move: 100, damage: 100 };
+  const d = H.carStats.default || vanillaStats();
   if (carId === "default") return d[field] ?? 100;
   const o = H.carStats[carId];
   return o?.[field] ?? d[field] ?? 100;
@@ -143,15 +148,15 @@ const carStatOverride = (H, carId) => {
   if (carId === "default") return false;
   const o = H.carStats[carId];
   if (!o) return false;
-  const d = H.carStats.default || { hp: 100, move: 100, damage: 100 };
-  return (o.hp ?? d.hp) !== d.hp || (o.move ?? d.move) !== d.move || (o.damage ?? d.damage) !== d.damage;
+  const d = H.carStats.default || vanillaStats();
+  return STATS.some((k) => (o[k] ?? d[k] ?? 100) !== (d[k] ?? 100));
 };
 const statInputId = (carId, stat) => `h-stat-${carId}-${stat}`;
-/** Default row = global: mirror HP/move/damage on every car and drop per-car overrides. */
+/** Default row = global: mirror every stat on every car and drop per-car overrides. */
 const syncDefaultRowToAllCars = () => {
   const box = $("#h-stat-list");
   if (!box) return;
-  for (const stat of ["hp", "move", "damage"]) {
+  for (const stat of STATS) {
     const src = box.querySelector(`.stat-car-input[data-car="default"][data-stat="${stat}"]`);
     if (!src) continue;
     box.querySelectorAll(`.stat-car-input[data-stat="${stat}"]`).forEach((inp) => {
@@ -164,17 +169,14 @@ const syncDefaultRowToAllCars = () => {
 };
 const pullCarStatsFromDom = (H) => {
   ensureCarStats(H);
-  const defHp = readStatPctEl($(`#${statInputId("default", "hp")}`));
-  const defMove = readStatPctEl($(`#${statInputId("default", "move")}`));
-  const defDmg = readStatPctEl($(`#${statInputId("default", "damage")}`));
-  H.carStats.default = { hp: defHp, move: defMove, damage: defDmg };
+  const read = (id) => Object.fromEntries(STATS.map((k) => [k, readStatPctEl($(`#${statInputId(id, k)}`))]));
+  const def = read("default");
+  H.carStats.default = def;
   for (const row of carStatRows()) {
     if (row.id === "default") continue;
-    const hp = readStatPctEl($(`#${statInputId(row.id, "hp")}`));
-    const move = readStatPctEl($(`#${statInputId(row.id, "move")}`));
-    const damage = readStatPctEl($(`#${statInputId(row.id, "damage")}`));
-    if (hp === defHp && move === defMove && damage === defDmg) delete H.carStats[row.id];
-    else H.carStats[row.id] = { hp, move, damage };
+    const s = read(row.id);
+    if (STATS.every((k) => s[k] === def[k])) delete H.carStats[row.id];
+    else H.carStats[row.id] = s;
   }
 };
 let statListSig = "";
@@ -202,18 +204,126 @@ const renderCarStatsList = (H, locked) => {
   const sig = carStatsListSig(H) + (locked ? "|lock" : "");
   if (sig === statListSig && box.childElementCount > 0) return;
   statListSig = sig;
-  const head = `<div class="car-stat-head"><span>${t("car_stats_col_car")}</span><span>${t("stat_hp")}</span><span>${t("stat_move")}</span><span>${t("stat_damage")}</span></div>`;
+  const head = `<div class="car-stat-head"><span>${t("car_stats_col_car")}</span><span>${t("stat_hp")}</span><span>${t("stat_move")}</span><span>${t("stat_damage")}</span><span title="${esc(t("stat_charge_title"))}">${t("stat_charge")}</span></div>`;
   const rows = carStatRows().map((row) => {
     const cls = row.id === "default" ? "car-stat-row is-default" : carStatOverride(H, row.id) ? "car-stat-row has-override" : "car-stat-row";
     return `<div class="${cls}"><span class="car-stat-name" title="${esc(row.name)}">${esc(row.name)}</span>`
-      + statCellHtml(row.id, "hp", effectiveCarStat(H, row.id, "hp"), locked)
-      + statCellHtml(row.id, "move", effectiveCarStat(H, row.id, "move"), locked)
-      + statCellHtml(row.id, "damage", effectiveCarStat(H, row.id, "damage"), locked)
+      + STATS.map((k) => statCellHtml(row.id, k, effectiveCarStat(H, row.id, k), locked)).join("")
       + "</div>";
   }).join("");
   box.innerHTML = head + rows;
   box.querySelectorAll(".stat-car-input").forEach((input) => syncStatRangeUi(input));
 };
+// ----- balance presets -----
+// A preset is the lobby's balance: ball speed, ability cooldowns and car stats. The host saves presets by name (settings) and
+// shares them as a code, "HMMR1:" + base64 of {n: name, b: ball speed, c: cooldown, s: car stats in the launcher's compact
+// form "default:100,100,100;8:150,100,100,80" (HP, move, damage, then recharge only when it isn't 100, so codes without it
+// still read in 1.5)}. The launcher cleans whatever a code holds like any other lobby setting.
+const PRESET_PREFIX = "HMMR1:";
+const PRESET_NORMAL = "normal";
+const clampPct = (v) => Math.min(300, Math.max(10, parseInt(v, 10) || 100));
+const compactStats = (cs) => {
+  const d = (cs && cs.default) || {};
+  const row = (o) => {
+    const v = STATS.map((k) => clampPct(o[k] ?? d[k]));
+    return (v[3] === 100 ? v.slice(0, 3) : v).join(",");
+  };
+  const def = row(d);
+  const cars = Object.keys(cs || {}).filter((k) => /^\d{1,3}$/.test(k)).sort((a, b) => a - b)
+    .map((k) => [k, row(cs[k])]).filter(([, r]) => r !== def);
+  return ["default:" + def, ...cars.map(([k, r]) => k + ":" + r)].join(";");
+};
+const parseStats = (text) => {
+  const cs = { default: vanillaStats() };
+  for (const part of String(text || "").split(";")) {
+    const m = /^(default|\d{1,3}):(\d{1,3}),(\d{1,3}),(\d{1,3})(?:,(\d{1,3}))?$/.exec(part.trim());
+    if (m) cs[m[1]] = { hp: clampPct(m[2]), move: clampPct(m[3]), damage: clampPct(m[4]), charge: clampPct(m[5] ?? 100) };
+  }
+  return cs;
+};
+const balanceOf = (H) => ({ ballSpeed: H.ballSpeed || 100, cooldown: H.cooldown || "", carStats: H.carStats || parseStats("") });
+const balanceKey = (p) => [p.ballSpeed || 100, p.cooldown || "", compactStats(p.carStats)].join("|");
+const savedPresets = () => (Array.isArray(S.settings.presets) ? S.settings.presets : []);
+// The saved preset (index) or "normal" the host setup matches, else "" (custom).
+const currentPreset = (H) => {
+  const key = balanceKey(balanceOf(H));
+  const i = savedPresets().findIndex((p) => balanceKey(p) === key);
+  if (i >= 0) return String(i);
+  return key === balanceKey({}) ? PRESET_NORMAL : "";
+};
+const presetCode = (p) => PRESET_PREFIX + btoa(unescape(encodeURIComponent(JSON.stringify({ n: p.name || "", b: p.ballSpeed || 100, c: p.cooldown || "", s: compactStats(p.carStats) }))));
+const readPresetCode = (text) => {
+  const s = String(text || "").replace(/\s+/g, "");
+  if (s.slice(0, PRESET_PREFIX.length).toUpperCase() !== PRESET_PREFIX) return null;
+  try {
+    const o = JSON.parse(decodeURIComponent(escape(atob(s.slice(PRESET_PREFIX.length)))));
+    if (!o || typeof o !== "object") return null;
+    return {
+      name: String(o.n || "").replace(/[\u0000-\u001f]/g, "").trim().slice(0, 40),
+      ballSpeed: Math.min(300, Math.max(50, parseInt(o.b, 10) || 100)),
+      cooldown: typeof o.c === "string" ? o.c : "",
+      carStats: parseStats(o.s),
+    };
+  } catch (e) {
+    return null;
+  }
+};
+async function applyPreset(p) {
+  const H = structuredClone(S.hostSetup);
+  H.ballSpeed = p.ballSpeed || 100;
+  H.cooldown = p.cooldown || "";
+  H.carStats = structuredClone(p.carStats || parseStats(""));
+  return act("host/configure", H);
+}
+const savePresets = (list) => act("settings", { presets: list });
+function renderPresets(H, locked) {
+  const list = savedPresets(), cur = currentPreset(H);
+  fill($("#h-preset"), [...(cur === "" ? [["", t("preset_custom")]] : []), [PRESET_NORMAL, t("preset_normal")],
+    ...list.map((p, i) => [String(i), p.name])], cur);
+  // During a match only the ball speed can change, so presets wait for the lobby.
+  $("#h-preset").disabled = $("#preset-paste").disabled = locked;
+  $("#preset-delete").disabled = !/^\d+$/.test($("#h-preset").value);
+}
+async function presetAction(id) {
+  const H = S.hostSetup, list = savedPresets().slice();
+  const cur = currentPreset(H), named = /^\d+$/.test(cur) ? list[+cur].name : "";
+  if (id === "preset-save") {
+    const name = (prompt(t("preset_name_ask"), named) || "").replace(/[\u0000-\u001f]/g, "").trim().slice(0, 40);
+    if (!name) return;
+    const i = list.findIndex((p) => p.name.toLowerCase() === name.toLowerCase());
+    if (i >= 0 && list[i].name !== named && !confirm(t("preset_replace", list[i].name))) return;
+    const p = { name, ...structuredClone(balanceOf(H)) };
+    if (i >= 0) list[i] = p; else list.push(p);
+    if (await savePresets(list)) toast(t("preset_saved", name), true);
+  } else if (id === "preset-delete") {
+    const i = $("#h-preset").value;
+    if (!/^\d+$/.test(i) || !list[+i] || !confirm(t("preset_confirm_delete", list[+i].name))) return;
+    const [gone] = list.splice(+i, 1);
+    if (await savePresets(list)) toast(t("preset_deleted", gone.name), true);
+  } else if (id === "preset-copy") {
+    const code = presetCode({ name: named, ...balanceOf(H) });
+    try {
+      await navigator.clipboard.writeText(code);
+      toast(t("preset_copied"), true);
+    } catch (e) {
+      prompt(t("preset_show_code"), code); // no clipboard access: let the host copy it by hand
+    }
+  } else if (id === "preset-paste") {
+    const p = readPresetCode(prompt(t("preset_paste_ask"), "") || "");
+    if (p === null) return toast(t("preset_bad_code"));
+    // Kept under its own name; a different preset with that name stays, and this one gets a number.
+    let name = p.name || t("preset_unnamed"), n = 2;
+    const base = name;
+    while (list.some((x) => x.name.toLowerCase() === name.toLowerCase() && balanceKey(x) !== balanceKey(p))) name = `${base} (${n++})`;
+    p.name = name;
+    if (!list.some((x) => x.name.toLowerCase() === name.toLowerCase())) list.push(p);
+    if (!(await savePresets(list))) return;
+    const later = S.lobby && S.lobby.phase !== "lobby";
+    if (!later && !(await applyPreset(p))) return;
+    toast(t(later ? "preset_imported_later" : "preset_imported", name), true);
+  }
+}
+
 const skinOptions = (carId) => skinsOf(carId).map((s, i) => [String(i), i === 0 ? t("original", s) : s]).concat([["random", t("random")]]);
 const mySkin = () => ((S.settings.skins || {})[carName(S.settings.car)] ?? "0");
 const diffName = (d) => (DIFFS().find((x) => x[0] === d) || [d, d])[1];
@@ -267,6 +377,19 @@ function render() {
 
 function renderBanners() {
   const b = [];
+  // A newer kit on GitHub (community PR #5): the launcher updates itself, restarts on the same port, and this page reloads.
+  if (S.updateStatus === "available") {
+    const notesHtml = S.updateNotes ? `<details><summary>${t("update_changelog")}</summary><pre class="changelog">${esc(S.updateNotes)}</pre></details>` : "";
+    const btns = [[t("update_now"), "update-apply"]];
+    if (S.updateUrl) btns.push([t("update_page"), "update-page"]);
+    b.push(["info", t(S.updatePreview ? "update_available_preview" : "update_available", esc(S.updateVersion)) + notesHtml, btns]);
+  } else if (S.updateStatus === "downloading") {
+    b.push(["info", t("update_downloading", S.updatePercent), []]);
+  } else if (S.updateStatus === "applying") {
+    b.push(["info", t("update_applying"), []]);
+  } else if (S.updateStatus.startsWith("failed:") && S.updateVersion) {
+    b.push(["warn", t("update_failed", esc(tr(S.updateStatus.replace(/^failed: /, "")))), [[t("update_retry"), "update-check"]]]);
+  }
   if (!S.pathOk) b.push(["bad", t("bad_path", esc(S.root))]);
   const choose = S.canSetup ? [[t("choose_game"), "choose-game"]] : [];
   if (S.setupStatus === "running") b.push(["info", t("setting_up", esc(S.setupLog))]);
@@ -320,6 +443,16 @@ function renderPlay() {
   }).join("");
   paint($("#lobbies"), html);
   paint($("#recent"), (S.settings.recent || []).map((a) => `<button data-fill="${esc(a)}">${esc(a)}</button>`).join(""));
+  renderOnline();
+}
+
+// HMM Private Club, Lonny's server (Online.cs): his HMM-Connect connects the Steam copy; we only start it.
+function renderOnline() {
+  const on = S.onlineConnected;
+  paint($("#online"), `<p class="hint">${t("online_hint")}</p>
+    <p class="${on ? "ok-t" : "hint"}">${t(on ? "online_connected" : "online_not_connected")}</p>
+    <div class="row">${on ? `<button class="primary" data-act="online-play">${t("online_play")}</button>` : ""}
+      <button ${on ? "" : 'class="primary"'} data-act="online-discord">${t("online_discord")}</button></div>`);
 }
 
 // ----- host -----
@@ -351,7 +484,7 @@ function renderLobby() {
   $("#lobby-title").textContent = t("someones_lobby", L.host || "?");
   const hostOut = L.members.some((m) => m.host && m.team === "none");
   $("#lobby-sub").textContent = (legacy ? buildName(L.build) + " · " + arenaName(L.arena, L.build) : t("lobby_sub", arenaName(L.arena), points(L.score))) + ballNote(L.ballSpeed) + (L.draftOn ? " · " + t("draft_title") : "")
-    + (!legacy && L.cooldown ? " · " + t("cd_short", L.cooldown) : "") + (legacy && L.wasd ? " · " + t("wasd_short") : "")
+    + (!legacy && L.cooldown ? " · " + t("cd_short", L.cooldown) : "")
     + (hostOut ? " · " + t("host_not_playing") : "") + (amHost ? "" : " · " + S.lobbyAddress);
 
   // status line
@@ -394,6 +527,8 @@ function renderLobby() {
   $("#drafted-car").hidden = !playing || !drafted;
   document.querySelectorAll(".player-only").forEach((e) => (e.hidden = !playing || legacy || (L.draft && !drafted)));
   $("#legacy-pick").hidden = !playing || !legacy;
+  $("#lobby-drive-row").hidden = !playing || !legacy;
+  fill($("#lobby-drive"), DRIVES(), S.settings.drive || "mouse");
   $("#lobby-car").disabled = $("#lobby-skin").disabled = locked;
   const ready = $("#ready");
   ready.hidden = !playing;
@@ -414,10 +549,8 @@ function renderLobby() {
     fill($("#h-cd"), COOLDOWNS.concat(COOLDOWNS.includes(cd) ? [] : [cd])
       .map((s) => [s, s ? t("cd_seconds", s) : t("cd_off")]), cd);
     renderCarStatsList(H, locked);
+    renderPresets(H, locked);
     document.querySelectorAll(".steam-only").forEach((e) => (e.hidden = legacy));
-    document.querySelectorAll(".legacy-only").forEach((e) => (e.hidden = !legacy));
-    $("#h-wasd").checked = !!H.wasd;
-    $("#h-wasd").disabled = locked;
     for (const team of ["blue", "red"]) {
       $(`#h-${team}-bots`).textContent = L.teams[team].bots + (H[team].bots > L.teams[team].bots ? ` (${H[team].bots})` : "");
       fill($(`#h-${team}-diff`), DIFFS(), H[team].difficulty);
@@ -575,14 +708,24 @@ function renderSettings() {
   if (document.activeElement !== name && name.value !== S.settings.name) name.value = S.settings.name;
   fill($("#s-car"), carOptions(), S.settings.car);
   fill($("#s-skin"), skinOptions(S.settings.car), mySkin());
+  fill($("#s-drive"), DRIVES(), S.settings.drive || "mouse");
   skinPic($("#s-skin-pic"), S.settings.car, mySkin());
   renderEmotes();
+  renderEffects();
   const res = RESOLUTIONS.map(([w, h]) => [`${w}x${h}`, `${w} × ${h}`]);
   const cur = `${S.settings.width}x${S.settings.height}`;
   if (cur !== "0x0" && !res.some((r) => r[0] === cur)) res.push([cur, `${S.settings.width} × ${S.settings.height}`]);
   fill($("#s-res"), [["0x0", t("res_game")], ...res], cur);
   if (document.activeElement !== $("#s-full")) $("#s-full").checked = S.settings.fullscreen;
   $("#s-nov").checked = !!S.settings.showNov;
+  const u = S.updateStatus;
+  paint($("#s-updates"), S.canUpdate ? `<p class="hint">${t("updates_hint", esc(S.release))}</p>
+    <label class="check"><input type="checkbox" id="s-preview-updates" ${S.previewUpdates ? "checked" : ""}> <span>${t("preview_updates")}</span></label>
+    <div class="row"><button data-act="update-check" ${["checking", "downloading", "applying"].includes(u) ? "disabled" : ""}>${t("check_updates")}</button>
+    <span class="${u === "latest" ? "ok-t" : u.startsWith("failed:") ? "warn-t" : "hint"}">${u === "checking" ? t("update_checking")
+      : u === "latest" ? t("update_latest") : u === "available" ? t("update_available", esc(S.updateVersion))
+      : u.startsWith("failed:") ? esc(tr(u.replace(/^failed: /, ""))) : ""}</span></div>`
+    : `<p class="hint">${t("updates_dev", esc(S.release))}</p>`);
   const busy = S.setupStatus === "running";
   paint($("#s-game"), `<p class="hint">${t("copies_hint")}</p>
     ${S.copies.map((c) => `<div class="copy">
@@ -595,8 +738,49 @@ function renderSettings() {
     </div>`).join("")}
     <div class="row">${S.canSetup ? `<button data-act="choose-game" ${busy ? "disabled" : ""}>${t("add_copy")}</button>` : ""}
     <button data-act="open-folder">${t("open_folder")}</button></div>`);
+  // Old builds from Steam's own depot (Builds.DepotsJson): the command for Steam's console, then "Add the download".
+  const depots = (S.depots || []).filter((d) => d.build !== "2017" || S.settings.showNov);
+  paint($("#s-depots"), depots.length ? `<h3>${t("depot_title")}</h3><p class="hint">${t("depot_hint")}</p>
+    ${depots.map((d) => `<div class="copy"><div class="copy-head"><b>${esc(buildName(d.build))}</b>
+      ${d.downloaded ? `<span class="ok-t">${t("depot_ready")}</span>` : ""}</div>
+      <div class="row"><code class="cmd">${esc(d.command)}</code><button data-copy="${esc(d.command)}">${t("copy")}</button></div>
+      <div class="row"><button data-act="depot-console">${t("depot_console")}</button>
+        <button ${d.downloaded ? 'class="primary"' : ""} data-depot-add="${esc(d.build)}" ${busy ? "disabled" : ""}>${t("depot_add")}</button></div>
+    </div>`).join("")}
+    <p class="hint">${t("depot_where", esc(depots[0].folder || "steamapps\\content\\app_331360\\depot_331361"))}</p>` : "");
   paint($("#s-firewall"), `${S.firewall ? `<p class="ok-t">${t("firewall_in_place")}</p>` : ""}<p class="hint">${t("firewall_hint", S.gamePort, S.lobbyPort)}</p>
     <button data-act="firewall">${t("setup_firewall")}</button>`);
+}
+
+// Effects (1.6): takeoff, respawn, takedown and scoring effects the game shipped, picked like skins; -1 = the game's own.
+const EFFECT_KINDS = ["takeoff", "respawn", "takedown", "score"];
+let effectLists = null, effectsLoading = false;
+const myEffects = () => {
+  const e = Array.isArray(S.settings.effects) && S.settings.effects.length === 4 ? S.settings.effects : [-1, -1, -1, -1];
+  return e.map((n) => parseInt(n, 10)).map((n) => (Number.isInteger(n) ? n : -1));
+};
+async function loadEffects() {
+  if (effectsLoading) return;
+  effectsLoading = true;
+  try {
+    const l = await api("effects");
+    if (EFFECT_KINDS.some((k) => (l[k] || []).length)) effectLists = l;
+  } catch (e) { }
+  effectsLoading = false;
+}
+function renderEffects() {
+  const el = $("#s-effects");
+  if (!effectLists) {
+    if (S.images) loadEffects().then(() => effectLists && renderEffects());
+    return paint(el, `<p class="hint">${S.gameReady ? t("pictures_making") : t("pictures_none")}</p>`);
+  }
+  if (el.contains(document.activeElement)) return;
+  const mine = myEffects();
+  paint(el, `<p class="hint">${t("effects_hint")}</p>` + EFFECT_KINDS.map((k, i) =>
+    `<label><span>${t("effect_" + k)}</span> <select class="effect-pick" data-effect="${i}">
+      <option value="-1"${mine[i] < 0 ? " selected" : ""}>${t("effect_default")}</option>
+      ${(effectLists[k] || []).filter(([n]) => n > 0).map(([n, name]) => `<option value="${n}"${n === mine[i] ? " selected" : ""}>${esc(name)}</option>`).join("")}
+    </select></label>`).join(""));
 }
 
 function renderEmotes() {
@@ -621,6 +805,13 @@ async function chooseGame() {
 
 // ---------- events ----------
 document.addEventListener("click", async (e) => {
+  const cp = e.target.closest("[data-copy]");
+  if (cp) {
+    try { await navigator.clipboard.writeText(cp.dataset.copy); toast(t("copied"), true); } catch (err) { toast(t("copy_failed")); }
+    return;
+  }
+  const dep = e.target.closest("[data-depot-add]");
+  if (dep) return act("depot/add", { build: dep.dataset.depotAdd });
   const b = e.target.closest("button");
   if (!b) return;
   if (b.dataset.view) return show(b.dataset.view);
@@ -653,6 +844,14 @@ document.addEventListener("click", async (e) => {
   switch (b.dataset.act) {
     case "setup": return S.gameDir ? act("setup", {}) : chooseGame();
     case "choose-game": return chooseGame();
+    case "online-play": return act("online/play", {}, t("online_starting"));
+    case "depot-console": return act("depot/console", {});
+    case "online-discord": return act("online/discord", {});
+    case "update-apply": return act("update/apply", {});
+    case "update-check": return act("update/check", {});
+    case "update-page":
+      if (S.updateUrl) window.open(S.updateUrl, "_blank");
+      return;
     case "firewall": {
       toast(t("firewall_asking"), true);
       const r = await act("firewall", {});
@@ -682,6 +881,7 @@ document.addEventListener("click", async (e) => {
       if (confirm(t("confirm_draft_reset"))) return act("host/draft-reset", {});
       return;
     case "start": return act("host/start", {});
+    case "preset-save": case "preset-delete": case "preset-copy": case "preset-paste": return presetAction(b.id);
     case "stop":
       if (confirm(t(S.lobby.phase === "draft" ? "confirm_stop_draft" : "confirm_stop"))) return act("host/stop", {});
       return;
@@ -726,6 +926,11 @@ document.addEventListener("input", (e) => {
 
 document.addEventListener("change", async (e) => {
   const el = e.target;
+  if (el.dataset.effect) {
+    const picks = myEffects();
+    picks[+el.dataset.effect] = parseInt(el.value, 10);
+    return act("settings", { effects: picks });
+  }
   if (el.dataset.botcar) {
     const [team, i] = el.dataset.botcar.split(":");
     const H = structuredClone(S.hostSetup);
@@ -755,7 +960,14 @@ document.addEventListener("change", async (e) => {
       return act("settings", { width: w, height: h });
     }
     case "s-full": return act("settings", { fullscreen: el.checked });
+    case "s-drive": case "lobby-drive": return act("settings", { drive: el.value });
+    case "h-preset": {
+      if (el.value === "") return;
+      const p = el.value === PRESET_NORMAL ? { ballSpeed: 100, cooldown: "", carStats: parseStats("") } : savedPresets()[+el.value];
+      return p && applyPreset(p);
+    }
     case "s-nov": return act("settings", { showNov: el.checked });
+    case "s-preview-updates": return act("settings", { previewUpdates: el.checked });
     case "h-spec": case "h-draft": case "h-bans": case "h-picks": case "h-dtime": {
       const H = structuredClone(S.hostSetup);
       H.spectators = $("#h-spec").checked;
@@ -773,14 +985,13 @@ document.addEventListener("change", async (e) => {
       const n = (team) => S.lobby.members.filter((m) => m.team === team).length;
       return act("lobby/update", { team: n("blue") <= n("red") ? "blue" : "red" });
     }
-    case "h-auto": case "h-arena": case "h-score": case "h-ball": case "h-cd": case "h-wasd": case "h-blue-diff": case "h-red-diff": {
+    case "h-auto": case "h-arena": case "h-score": case "h-ball": case "h-cd": case "h-blue-diff": case "h-red-diff": {
       const H = structuredClone(S.hostSetup);
       H.autoStart = $("#h-auto").checked;
       H.arena = parseInt($("#h-arena").value, 10);
       H.score = parseInt($("#h-score").value, 10);
       H.ballSpeed = parseInt($("#h-ball").value, 10);
       H.cooldown = $("#h-cd").value;
-      H.wasd = $("#h-wasd").checked;
       H.blue.difficulty = $("#h-blue-diff").value;
       H.red.difficulty = $("#h-red-diff").value;
       return act("host/configure", H);
@@ -789,18 +1000,22 @@ document.addEventListener("change", async (e) => {
 });
 
 // ---------- polling ----------
-let polling = false;
+let polling = false, firstRelease = null;
 async function poll() {
   if (polling) return;
   polling = true;
   try {
     S = await api("state");
+    if (S.release !== firstRelease && firstRelease) return location.reload(); // the launcher was updated: load its page
+    firstRelease = S.release;
     const rev = S.lobby ? S.lobby.rev : -1;
     if (S.lobby && lastLobbyRev === -1 && view !== "lobby") show("lobby");
     lastLobbyRev = rev;
     render();
   } catch (e) {
-    paint($("#banners"), `<div class="banner bad"><div>${t("launcher_down")}</div></div>`);
+    // While an update restarts the launcher the page waits for the new one on the same port.
+    const updating = S && S.updateStatus === "applying";
+    paint($("#banners"), `<div class="banner ${updating ? "info" : "bad"}"><div>${t(updating ? "update_restarting" : "launcher_down")}</div></div>`);
   } finally {
     polling = false;
   }

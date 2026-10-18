@@ -23,6 +23,19 @@ namespace HmmRevive
         // Start of CombatController.ApplyInstant(mod, causer, eventId), after mod.Amount: amount = ScaleDamage(amount, mod, causer)
         public static float ScaleDamage(float amount, object mod, object causer) => CarStats.ScaleDamage(amount, mod, causer);
 
+        // CombatAttributes.Apply, at "_currentStatus |= mod.Data.Status": status = FilterStatus(status, mod, this) (ThrowAfterE.cs)
+        public static HeavyMetalMachines.Combat.StatusKind FilterStatus(HeavyMetalMachines.Combat.StatusKind status, object mod, object attributes) =>
+            ThrowAfterE.FilterStatus(status, mod, attributes);
+
+        // Start of CustomizationHubMasterVFX.Activate(owner, target, effect): test log of the effect item (Effects.cs)
+        public static void EffectActivated(object vfx, object owner, object target) => Effects.Activated(vfx, owner, target);
+
+        // Right after ScaleDamage: amount = ScaleCharge(amount, mod, this) (the recharge stat, EPRepair modifiers)
+        public static float ScaleCharge(float amount, object mod, object controller) => CarStats.ScaleCharge(amount, mod, controller);
+
+        // CombatData.EPRegen, before every return: regen = ScaleEpRegen(regen, this)
+        public static float ScaleEpRegen(float regen, object combatData) => CarStats.ScaleEpRegen(regen, combatData);
+
         // RedirectProjectContext.FindProjectContext(string sceneName): sceneName = MapProjectContextScene(sceneName)
         public static string MapProjectContextScene(string sceneName)
         {

@@ -142,6 +142,13 @@ namespace HmmRevive.Launcher
             return list.Count == 4 && list.All(n => n >= 0) ? string.Join(",", list) : null;
         }
 
+        /// <summary>The four effects (takeoff, respawn, takedown, score; numbers in hmmrevive-effects.txt, -1 = the game's), or null for all the game's.</summary>
+        public static string Effects()
+        {
+            var list = Data.List("effects").Select(o => int.TryParse(o?.ToString(), out int n) ? n : -1).ToList();
+            return list.Count == 4 && list.Any(n => n >= 0) ? string.Join(",", list.Select(n => Math.Max(-1, n))) : null;
+        }
+
         public static string SkinFor(string carId)
         {
             string car = Catalog.CarName(carId);
@@ -286,7 +293,8 @@ namespace HmmRevive.Launcher
             yield return "--hmmrevive-live=" + live;
         }
 
-        // ---- the lobby's car stats (mod CarStats.cs): {"default": {hp, move, damage}, "<car id>": {...}}, percent 10-300 ----
+        // ---- the lobby's car stats (mod CarStats.cs): {"default": {hp, move, damage, charge}, "<car id>": {...}}, percent 10-300 ----
+        // (charge = recharge, how fast the ultimate fills, since 1.6)
 
         /// <summary>The host's car stats with only known keys and numbers in range; cars equal to "default" are dropped.</summary>
         public static Dictionary<string, object> CleanCarStats(Dictionary<string, object> root)
@@ -296,6 +304,7 @@ namespace HmmRevive.Launcher
             Func<Dictionary<string, object>, Dictionary<string, object>> stats = o => new Dictionary<string, object>
             {
                 ["hp"] = ClampPct(o?.Int("hp", 100) ?? 100), ["move"] = ClampPct(o?.Int("move", 100) ?? 100), ["damage"] = ClampPct(o?.Int("damage", 100) ?? 100),
+                ["charge"] = ClampPct(o?.Int("charge", 100) ?? 100),
             };
             var def = stats(root.Obj("default"));
             clean["default"] = def;
@@ -308,18 +317,21 @@ namespace HmmRevive.Launcher
             return clean;
         }
 
-        /// <summary>--hmmrevive-car-stats value ("default:100,120,100;8:150,100,100"), null when every car keeps the game's own.</summary>
+        /// <summary>
+        /// --hmmrevive-car-stats value ("default:100,120,100;8:150,100,100,80"), null when every car keeps the game's own. The
+        /// recharge number is written only when it isn't 100, so the value (and preset codes) stays what 1.5 reads.
+        /// </summary>
         public static string CompactCarStats(Dictionary<string, object> root)
         {
             root = CleanCarStats(root);
             var parts = root.Select(kv => (Dictionary<string, object>)kv.Value)
-                .Zip(root.Keys, (s, k) => k + ":" + s["hp"] + "," + s["move"] + "," + s["damage"]).ToList();
+                .Zip(root.Keys, (s, k) => k + ":" + s["hp"] + "," + s["move"] + "," + s["damage"] + ((int)s["charge"] != 100 ? "," + s["charge"] : "")).ToList();
             return parts.Count == 1 && parts[0] == "default:100,100,100" ? null : string.Join(";", parts);
         }
 
         /// <summary>A lobby's car stats as sent to the players: passed to our game only if it has exactly that shape.</summary>
         public static string CleanCompactCarStats(string s) =>
-            s != null && Regex.IsMatch(s, @"^(default|\d{1,3}):\d{1,3},\d{1,3},\d{1,3}(;\d{1,3}:\d{1,3},\d{1,3},\d{1,3})*$") ? s : null;
+            s != null && Regex.IsMatch(s, @"^(default|\d{1,3}):\d{1,3},\d{1,3},\d{1,3}(,\d{1,3})?(;\d{1,3}:\d{1,3},\d{1,3},\d{1,3}(,\d{1,3})?)*$") ? s : null;
 
         private static int ClampPct(int v) => Math.Max(10, Math.Min(300, v));
 
@@ -381,7 +393,7 @@ namespace HmmRevive.Launcher
         /// <param name="car">car id, or null for the one in the settings</param>
         /// <param name="cooldown">the lobby's ability cooldown in seconds ("0.1"), null or "" for the game's own</param>
         /// <param name="carStats">the lobby's car stats (Game.CompactCarStats), null for the game's own</param>
-        /// <param name="wasd">old builds: drive with WASD (the lobby host's choice)</param>
+        /// <param name="wasd">old builds: drive with WASD (this player's own setting)</param>
         public static Process StartClient(string build, string ip, int port, string team, int score, string car = null, string cooldown = null, string carStats = null, bool wasd = false)
         {
             StopClient();
@@ -402,6 +414,8 @@ namespace HmmRevive.Launcher
             if (spectate) a.Add("--hmmrevive-spectate");
             string emotes = Settings.Emotes();
             if (!spectate && emotes != null) a.Add("--hmmrevive-emotes=" + emotes);
+            string effects = Settings.Effects();
+            if (!spectate && effects != null) a.Add("--hmmrevive-effects=" + effects);
             int w = Settings.Data.Int("width"), h = Settings.Data.Int("height");
             if (w > 0 && h > 0) a.AddRange(new[] { "-screen-width", w.ToString(), "-screen-height", h.ToString() });
             a.AddRange(new[] { "-screen-fullscreen", Settings.Data.Bool("fullscreen", true) ? "1" : "0" });
@@ -446,6 +460,27 @@ namespace HmmRevive.Launcher
                 try { return File.ReadAllText(Path.Combine(ImagesDir, "done.txt")).Trim() == GameVersion; }
                 catch { return false; }
             }
+        }
+
+        /// <summary>
+        /// Effects in the game per kind ({takeoff: [[number, title], ...], respawn, takedown, score}), from
+        /// hmmrevive-effects.txt, which the mod writes with the pictures; empty lists before that.
+        /// </summary>
+        public static Dictionary<string, object> EffectsList()
+        {
+            var kinds = new[] { "takeoff", "respawn", "takedown", "score" };
+            var lists = kinds.ToDictionary(k => k, k => new List<object>());
+            try
+            {
+                foreach (string line in File.ReadAllLines(Path.Combine(Paths.Instance, "hmmrevive-effects.txt")))
+                {
+                    string[] f = line.Split('\t');
+                    if (f.Length >= 3 && lists.ContainsKey(f[0]) && int.TryParse(f[1], out int n))
+                        lists[f[0]].Add(new object[] { n, f.Length > 3 && f[3].Trim() != "" ? f[3].Trim() : f[2] });
+                }
+            }
+            catch { }
+            return lists.ToDictionary(kv => kv.Key, kv => (object)kv.Value.ToArray());
         }
 
         /// <summary>Emotes in the game (hmmrevive-emotes.txt, written by the mod), 0 before the pictures were made.</summary>
@@ -548,15 +583,21 @@ namespace HmmRevive.Launcher
         /// <summary>Windows' open-file window, asking for HMM.exe; the chosen file, or null when cancelled.</summary>
         public static string BrowseForGame()
         {
-            if (Interlocked.Exchange(ref _browsing, 1) == 1) throw new Exception("The window to choose the game is already open.");
+            bool pt = Settings.Data.Str("lang") == "pt";
+            return BrowseForFile(pt ? "Escolha o HMM.exe na pasta do Heavy Metal Machines" : "Choose HMM.exe in your Heavy Metal Machines folder",
+                "HMM.exe|HMM.exe", FindGame() ?? Environment.GetFolderPath(Environment.SpecialFolder.MyComputer));
+        }
+
+        /// <summary>Windows' open-file window in front of the launcher page; the chosen file, or null when cancelled.</summary>
+        public static string BrowseForFile(string title, string filter, string start)
+        {
+            if (Interlocked.Exchange(ref _browsing, 1) == 1) throw new Exception("The window to choose a file is already open.");
             string chosen = null;
             Exception error = null;
             var t = new Thread(() =>
             {
                 try
                 {
-                    bool pt = Settings.Data.Str("lang") == "pt";
-                    string start = FindGame();
                     // The file window must open in front of the launcher page. Windows doesn't let a program that isn't the
                     // active one (the page's browser is) put a window in front, so a never-shown topmost owner wasn't
                     // enough and the window opened behind the page. Now a tiny invisible owner is shown at the mouse and
@@ -573,11 +614,11 @@ namespace HmmRevive.Launcher
                             Native.ToFront(owner.Handle);
                             using (var dlg = new System.Windows.Forms.OpenFileDialog
                             {
-                                Title = pt ? "Escolha o HMM.exe na pasta do Heavy Metal Machines" : "Choose HMM.exe in your Heavy Metal Machines folder",
-                                Filter = "HMM.exe|HMM.exe",
+                                Title = title,
+                                Filter = filter,
                                 CheckFileExists = true,
                                 RestoreDirectory = true,
-                                InitialDirectory = start ?? Environment.GetFolderPath(Environment.SpecialFolder.MyComputer),
+                                InitialDirectory = start,
                             })
                             {
                                 if (dlg.ShowDialog(owner) == System.Windows.Forms.DialogResult.OK) chosen = dlg.FileName;

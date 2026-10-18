@@ -16,6 +16,9 @@ namespace HmmRevive.Legacy
     /// </summary>
     public static class Hooks
     {
+        // Start of BombTargetTrigger.OnTriggerStay(other): if (SkipOwnGoal(this, other)) return; (OwnGoal.cs)
+        public static bool SkipOwnGoal(object trigger, object other) => OwnGoal.Skip(trigger, other);
+
         // Start of HMMHub.Awake and StateMachine.Awake (whichever runs first rewires the scene for the server).
         public static void BeforeAwake(object self)
         {
