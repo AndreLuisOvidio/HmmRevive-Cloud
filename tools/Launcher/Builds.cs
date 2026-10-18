@@ -78,8 +78,11 @@ namespace HmmRevive.Launcher
 
         public const string SteamApp = "331360", SteamDepot = "331361";
 
-        /// <summary>Manifest of each old build in the game's depot (SteamDB's manifest list); null = not known yet.</summary>
-        public static readonly Dictionary<string, string> Manifests = new Dictionary<string, string> { ["2017sep"] = null, ["2017"] = null };
+        /// <summary>
+        /// Manifest of each old build in the game's depot (SteamDB's manifest list); null = not offered (the November build
+        /// is experimental, so it isn't offered for now).
+        /// </summary>
+        public static readonly Dictionary<string, string> Manifests = new Dictionary<string, string> { ["2017sep"] = "543058244645982357", ["2017"] = null };
 
         public static string DepotFolder
         {

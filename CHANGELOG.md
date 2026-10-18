@@ -6,6 +6,9 @@ Newest first. The version is shown on the first line of every kit window (setup,
 
 Preview. Thanks to AndreLuisOvidio for the automatic updates, and to Lonny for his help with the HMM Private Club.
 
+Preview 2 adds the September 2017 version to "Download an old build from Steam" in Settings. If you have the first 1.6
+preview, the launcher offers this update by itself.
+
 - **Automatic updates** (by AndreLuisOvidio): the launcher looks for a newer HMM Revive on GitHub each time it starts.
   When there is one, a banner shows what's new and "Update now" downloads it, checks it and updates the kit folder in
   place (your settings and game copies stay), then the launcher restarts and the page reloads by itself. Settings has an
@@ -21,8 +24,7 @@ Preview. Thanks to AndreLuisOvidio for the automatic updates, and to Lonny for h
   the card links to the club's Discord, where HMM-Connect is. HMM Revive's own copy isn't affected, so you can play both:
   after HMM-Connect, "Update game copy" in HMM Revive keeps working.
 - **Old versions from Steam**: Settings explains how to download an old version of the game with your own Steam account
-  (a command for Steam's console, then "Add the download"). Not in this preview yet: it shows up once the old
-  versions' download ids are confirmed, in a later update.
+  (a command for Steam's console, then "Add the download"). For now the September 2017 version.
 - **No own goals on the 2017 versions** while your team carries the ball in your own goal, like the Steam version (a
   ball thrown or dropped into your own goal still counts, as on Steam). Not tested in a real match yet: tell us how it
   plays.
