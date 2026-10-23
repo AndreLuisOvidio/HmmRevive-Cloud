@@ -91,5 +91,14 @@ namespace HmmRevive.Launcher.Tests
             Assert.Equal(3, d["number"]);
             Assert.Equal(5, d["count"]);
         }
+
+        [Fact]
+        public void ALongReservingIsShownAsTheDownloadBecauseAzureOnlyReportsItLater()
+        {
+            Assert.Equal("reserve", CloudProgress.Compute("reserve", 20)["step"]);
+            Assert.Equal("pull", CloudProgress.Compute("reserve", 60)["step"]);
+            Assert.Equal("pull", CloudProgress.Compute("reserve", 200)["step"]); // a far region downloads for minutes
+            Assert.Equal("start", CloudProgress.Compute("start", 60)["step"]);   // the other steps are not guessed
+        }
     }
 }

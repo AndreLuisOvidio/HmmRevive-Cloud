@@ -25,8 +25,11 @@ namespace HmmRevive.Launcher
 
         public static Dictionary<string, object> Compute(string step, double elapsedSeconds)
         {
-            int idx = Math.Max(0, Array.IndexOf(Steps, step));
             elapsedSeconds = Math.Max(0, elapsedSeconds);
+            // Azure only reports a group's image events once it is running, so the orchestrator says "reserving" for the
+            // whole download. A server that has been reserved for longer than the usual reserving time is downloading.
+            if (step == "reserve" && elapsedSeconds >= Typical[0] + Typical[1]) step = "pull";
+            int idx = Math.Max(0, Array.IndexOf(Steps, step));
             int before = 0;
             for (int i = 0; i < idx; i++) before += Typical[i];
             // How far into the current step we probably are, never claiming it is finished before the next step starts.
