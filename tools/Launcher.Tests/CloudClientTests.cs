@@ -150,5 +150,16 @@ namespace HmmRevive.Launcher.Tests
             Assert.Contains("invite key", e.Message);
             Assert.Empty(sent);
         }
+
+        // CREATE-09: the region the host picked travels with the create request.
+        [Fact]
+        public void CreateSendsTheRegionWhenOneIsPickedAndNothingWhenNot()
+        {
+            var (cloud, sent) = Make(n => Ok(new Dictionary<string, object> { ["id"] = "a1b2c3" }, 202));
+            cloud.Create("1.5", "public", null, null, "eastus");
+            cloud.Create("1.5", "public", null, null);
+            Assert.Equal("eastus", Js.Read(sent[0].Body).Str("region"));
+            Assert.False(Js.Read(sent[1].Body).ContainsKey("region")); // the orchestrator then uses Brazil
+        }
     }
 }

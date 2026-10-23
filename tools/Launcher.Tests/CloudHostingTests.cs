@@ -41,6 +41,7 @@ namespace HmmRevive.Launcher.Tests
             return d;
         }
 
+        private Action<string> _onCreateBody;
         private int joined;
         private string joinedToken, joinedHost;
         private Session lastSeat;
@@ -50,6 +51,7 @@ namespace HmmRevive.Launcher.Tests
             _orch = orch;
             Cloud.Transport t = (m, u, h, b, ms) =>
             {
+                if (m == "POST" && u.EndsWith("/v1/lobbies")) _onCreateBody?.Invoke(b);
                 lock (_gate) _calls.Add((m, u, h.ContainsKey("Authorization") ? h["Authorization"] : null));
                 if (u.Contains("/lobby/host/")) return _lobby(u);
                 return _orch(m, u);
@@ -257,6 +259,32 @@ namespace HmmRevive.Launcher.Tests
             WaitFor(() => StateOf(h) == "ready");
             Assert.False(h.State().ContainsKey("progress"));
             h.Close();
+        }
+
+        [Fact]
+        public void TheRegionOfThePageGoesToTheOrchestratorAndIsRememberedForNextTime()
+        {
+            string body = null;
+            var h = Make((m, u) =>
+            {
+                if (m == "POST") return Json(Obj("id", "a1b2c3", "hostname", "a1b2c3.hmm.ovidio.dev", "hostToken", "t"), 202);
+                return Json(Obj("id", "a1b2c3", "state", "creating", "step", "reserving", "elapsedSeconds", 5));
+            });
+            _onCreateBody = b => body = b;
+            Assert.Null(h.Create("1.5", "public", null, null, "spaincentral"));
+            Assert.Equal("spaincentral", Js.Read(body).Str("region"));
+            Assert.Equal("spaincentral", Settings.Data.Str("cloudRegion"));
+            h.Close();
+        }
+
+        [Fact]
+        public void ARegionThatIsNotOnTheListIsRefusedWithoutCallingTheCloud()
+        {
+            var h = Make(Orchestrator("creating"));
+            string why = h.Create("1.5", "public", null, null, "mars");
+            Assert.Contains("region", why);
+            lock (_gate) Assert.Empty(_calls);
+            Assert.Equal("failed", StateOf(h));
         }
     }
 }

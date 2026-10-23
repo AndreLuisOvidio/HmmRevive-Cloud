@@ -164,5 +164,19 @@ namespace HmmRevive.Launcher.Tests
             Assert.Null(CloudHostConfig.Parse(Env(env), out error));
             Assert.Contains("GUARD_EMPTY_SECONDS", error);
         }
+
+        [Fact]
+        public void TheRegionOfTheContainerIsReadAndReportedByTheLobby()
+        {
+            var env = Good();
+            env["REGION"] = "spaincentral";
+            var c = CloudHostConfig.Parse(Env(env), out string error);
+            Assert.Null(error);
+            Assert.Equal("spaincentral", c.Region);
+            var lobby = new Lobby(0, 0, Builds.Steam) { Cloud = true, Region = c.Region };
+            Assert.Equal("spaincentral", lobby.Info()["region"]);
+            Assert.Equal("spaincentral", lobby.Snapshot(null)["region"]);
+            Assert.Null(new Lobby(0, 0, Builds.Steam).Info()["region"]); // a local lobby has none
+        }
     }
 }

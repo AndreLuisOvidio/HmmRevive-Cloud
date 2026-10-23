@@ -430,6 +430,9 @@ async function discover() {
 }
 
 // Latency, colored: under 60 ms good, under 120 fair, above that poor.
+// "brazilsouth" -> "Brazil" / "Brasil" (the orchestrator's region names are never shown as they are).
+const REGIONS = ["brazilsouth", "eastus", "spaincentral"];
+const regionName = (r) => (REGIONS.includes(r) ? t("region_" + r) : r || "");
 const pingClass = (ms) => (ms == null ? "none" : ms < 60 ? "good" : ms < 120 ? "ok" : "bad");
 const pingText = (ms) => (ms == null ? t("ping_none") : ms + " ms");
 
@@ -448,7 +451,7 @@ function renderPlay() {
       <div class="t">${t("someones_lobby", esc(l.host || t("someone")))}</div>
       <div class="m">${isLegacy(build) ? esc(buildName(build)) + " · " : ""}${esc(arenaName(l.arena, build))} · ${l.players === 1 ? t("players_1") : t("players_n", l.players)}${l.bots ? t("plus_bots", l.bots) : ""}${l.draft ? " · " + t("draft_title") : ""}${l.spectatorSeats ? " · " + t("spec_seats_n", l.spectatorSeats) : ""}</div>
       <div class="m">${esc(l.address)} · ${t("via", esc(l.via))}${sameVersion ? "" : ` · <span class="warn-t">${t("version_x", esc(l.version))}</span>`}${sameVersion && !haveBuild(build) ? ` · <span class="warn-t">${t("lobby_needs_copy", esc(buildName(build)))}</span>` : ""}${l.passwordRequired ? ` · 🔒 ${t("password_needed")}` : ""}${"ping" in l ? ` · ${t("ping_label")} <span class="ping ${pingClass(l.ping)}" title="${esc(t("ping_tip"))}">${pingText(l.ping)}</span>` : ""}</div>
-      <div class="row"><span class="pill ${live ? "live" : "open"}">${live ? t("match_running_pill") : t("in_lobby_pill")}</span>${l.cloud ? `<span class="pill cloud">☁ ${t("cloud_badge")}</span>` : ""}
+      <div class="row"><span class="pill ${live ? "live" : "open"}">${live ? t("match_running_pill") : t("in_lobby_pill")}</span>${l.cloud ? `<span class="pill cloud">☁ ${t("cloud_badge")}${l.region ? " · " + esc(regionName(l.region)) : ""}</span>` : ""}
         <button class="primary" data-join="${esc(l.address)}" ${l.passwordRequired ? 'data-pw="1"' : ""} ${canJoin ? "" : "disabled"}>${t("join")}</button></div>
     </div>`;
   }).join("");
@@ -504,7 +507,10 @@ function renderCloudHost() {
   paint($("#cloud-rejoin"), offer ? `<div class="banner info"><div>${t("cloud_rejoin_offer", esc(C.saved.hostname || C.saved.id))}</div><div class="row"><button class="primary" data-act="cloud-rejoin">${t("cloud_rejoin")}</button></div></div>` : "");
   $("#cloud-key-row").hidden = !!C.keySet;
   if (!$("#cloud-visibility").options.length) fill($("#cloud-visibility"), [["public", t("cloud_vis_public")], ["private", t("cloud_vis_private")]], "public");
+  // The region the host used last time is the starting choice.
+  fill($("#cloud-region"), REGIONS.map((r) => [r, regionName(r)]), $("#cloud-region").value || (S.settings.cloudRegion || "brazilsouth"));
   const busy = C.state === "creating";
+  $("#cloud-region").disabled = busy || C.state === "ready";
   $("#cloud-visibility").disabled = $("#cloud-password").disabled = busy || C.state === "ready";
   let progress = "";
   if (busy) progress = progressPanel(C.progress);
@@ -541,7 +547,7 @@ function renderCloudBar(L, amHost) {
   bar.hidden = !L.cloud;
   if (!L.cloud) return;
   const code = amHost && S.cloud && S.cloud.id ? S.cloud.id : (S.lobbyAddress || "").split(".")[0];
-  paint(bar, `<span class="pill cloud">☁ ${t("cloud_badge")}</span><b>${t("cloud_code", esc(code))}</b>` + (amHost ?
+  paint(bar, `<span class="pill cloud">☁ ${t("cloud_badge")}${L.region ? " · " + esc(regionName(L.region)) : ""}</span><b>${t("cloud_code", esc(code))}</b>` + (amHost ?
     `<label><span class="hint">${t("cloud_visibility")}</span> <select id="cloud-vis"><option value="public" ${L.visibility === "private" ? "" : "selected"}>${t("cloud_vis_public")}</option><option value="private" ${L.visibility === "private" ? "selected" : ""}>${t("cloud_vis_private")}</option></select></label>` : ""));
 }
 
@@ -946,7 +952,7 @@ document.addEventListener("click", async (e) => {
       if (S.cloud && S.cloud.state === "ready" && S.lobby) return show("lobby");
       if (!S.cloud || !S.cloud.keySet) { toast(t("cloud_need_key")); $("#cloud-key").focus(); return; }
       awaitingCloud = true;
-      const r = await act("cloud/create", { visibility: $("#cloud-visibility").value || "public", password: $("#cloud-password").value });
+      const r = await act("cloud/create", { visibility: $("#cloud-visibility").value || "public", password: $("#cloud-password").value, region: $("#cloud-region").value });
       if (!r) awaitingCloud = false;
       return;
     }
