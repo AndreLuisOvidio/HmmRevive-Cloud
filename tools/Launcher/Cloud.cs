@@ -48,12 +48,13 @@ namespace HmmRevive.Launcher
             new Cloud(Settings.Data.Str("cloudUrl", DefaultUrl), Settings.Data.Str("cloudKey"));
 
         /// <summary>Creates a lobby: returns id, hostname and the host token (shown only in this reply).</summary>
-        public Dictionary<string, object> Create(string version, string visibility, string password, string label)
+        public Dictionary<string, object> Create(string version, string visibility, string password, string label, string region = null)
         {
             if (string.IsNullOrEmpty(_apiKey)) throw new CloudException("Enter your cloud invite key first.");
             var body = new Dictionary<string, object> { ["version"] = version, ["visibility"] = visibility ?? "public" };
             if (!string.IsNullOrEmpty(password)) body["password"] = password;
             if (!string.IsNullOrEmpty(label)) body["label"] = label;
+            if (!string.IsNullOrEmpty(region)) body["region"] = region; // none: the orchestrator uses Brazil
             // Not retried: if the first attempt did reach the orchestrator, a second would start a second (billed) lobby.
             return Js.Read(Call("POST", "/v1/lobbies", body, auth: true, retry: false));
         }

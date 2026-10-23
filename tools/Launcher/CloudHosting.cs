@@ -13,6 +13,13 @@ namespace HmmRevive.Launcher
     {
         public const string SavedKey = "cloudLobby";
         public const int MaxKeyLength = 128;
+
+        /// <summary>Where a lobby's server can run: the orchestrator's region names and what the page shows.</summary>
+        public static readonly Dictionary<string, string> Regions = new Dictionary<string, string>
+        {
+            ["brazilsouth"] = "Brazil", ["eastus"] = "United States", ["spaincentral"] = "Europe (Madrid)",
+        };
+        public const string DefaultRegion = "brazilsouth";
         private static readonly TimeSpan GiveUpAfter = TimeSpan.FromMinutes(10); // the orchestrator fails a lobby at 8 minutes
 
         private readonly Func<Cloud> _cloud;
@@ -75,8 +82,10 @@ namespace HmmRevive.Launcher
         }
 
         /// <summary>Asks for a lobby and, in the background, follows it until it is ready. Returns an error for the page, or null.</summary>
-        public string Create(string version, string visibility, string password, string label)
+        public string Create(string version, string visibility, string password, string label, string region = null)
         {
+            region = string.IsNullOrWhiteSpace(region) ? Settings.Data.Str("cloudRegion", DefaultRegion) : region.Trim().ToLowerInvariant();
+            if (!Regions.ContainsKey(region)) return Fail("Pick a region from the list.");
             Dictionary<string, object> made;
             lock (_gate)
             {
@@ -87,7 +96,7 @@ namespace HmmRevive.Launcher
                 _step = "contact";
                 _started = DateTime.UtcNow;
             }
-            try { made = _cloud().Create(version, visibility, password, label); }
+            try { made = _cloud().Create(version, visibility, password, label, region); }
             catch (CloudException e) { return Fail(e.Message); }
             lock (_gate)
             {
@@ -97,6 +106,7 @@ namespace HmmRevive.Launcher
                 _message = "Starting your server...";
                 _step = "reserve";
             }
+            Settings.Set("cloudRegion", region); // the next lobby starts from the same choice
             Settings.Set(SavedKey, new Dictionary<string, object> { ["id"] = _id, ["hostname"] = _hostname, ["hostToken"] = _token });
             Follow();
             return null;

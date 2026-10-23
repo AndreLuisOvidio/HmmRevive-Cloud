@@ -55,6 +55,8 @@ namespace HmmRevive.Launcher
         public readonly string Build;
         /// <summary>Cloud lobby (runs in a container): reported in <see cref="Info"/> so clients show it as such.</summary>
         public bool Cloud;
+        /// <summary>Azure region of a cloud lobby's server (reported so every player sees where it runs); null for a local lobby.</summary>
+        public string Region;
         /// <summary>"public" is listed by the orchestrator, "private" only joins by address. Local lobbies are always "public".</summary>
         public string Visibility { get; private set; } = "public";
         private string _password = ""; // empty = anyone may join
@@ -729,6 +731,7 @@ namespace HmmRevive.Launcher
                     ["visibility"] = Visibility,
                     ["passwordRequired"] = _password.Length > 0,
                     ["cloud"] = Cloud,
+                    ["region"] = Region,
                     ["message"] = Message,
                     ["arena"] = Arena,
                     ["ballSpeed"] = BallSpeed,
@@ -783,6 +786,7 @@ namespace HmmRevive.Launcher
                     ["visibility"] = Visibility,
                     ["passwordRequired"] = _password.Length > 0,
                     ["cloud"] = Cloud,
+                    ["region"] = Region,
                     ["players"] = Players.Count(),
                     ["spectatorSeats"] = SpectatorsOn ? Math.Max(0, SpectatorSlots - Humans(Spectator) - Freeing) : 0,
                     ["draft"] = DraftEnabled,

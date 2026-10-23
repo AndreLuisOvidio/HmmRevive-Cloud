@@ -78,5 +78,14 @@ namespace HmmRevive.Launcher.Tests
             var found = Discovery.Find(9697, () => new List<Dictionary<string, object>> { bad, Lobby("a1b2c3") }, includeLocal: false);
             Assert.Single(found);
         }
+
+        [Fact]
+        public void TheRegionOfACloudLobbyIsKeptInTheList()
+        {
+            var l = Lobby("a1b2c3");
+            l["region"] = "eastus";
+            var found = Discovery.Find(9697, () => new List<Dictionary<string, object>> { l }, includeLocal: false);
+            Assert.Equal("eastus", Assert.Single(found).Str("region"));
+        }
     }
 }
