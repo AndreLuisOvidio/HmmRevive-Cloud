@@ -13,6 +13,8 @@ namespace HmmRevive.Launcher
     public sealed class CloudHostConfig
     {
         public string LobbyId, HostToken, LobbySecret, OrchestratorUrl, Visibility = "public", Password, PublicHostname, Region;
+        /// <summary>Where run-lobby.sh reports the game download (GAME_STATUS_FILE); null = the game is already in place.</summary>
+        public string GameStatusFile;
         public int LobbyPort = 9697, GamePort = 9696;
         public DateTime? Deadline;
         public TimeSpan HeartbeatInterval = TimeSpan.FromSeconds(30);
@@ -28,6 +30,7 @@ namespace HmmRevive.Launcher
             {
                 LobbyId = Get("LOBBY_ID"), HostToken = Get("HOST_TOKEN"), LobbySecret = Get("LOBBY_SECRET"),
                 OrchestratorUrl = Get("ORCH_URL"), Password = Get("LOBBY_PASSWORD"), PublicHostname = Get("PUBLIC_HOSTNAME"), Region = Get("REGION"),
+                GameStatusFile = Get("GAME_STATUS_FILE"),
             };
             var missing = new[] { "LOBBY_ID", "HOST_TOKEN" }.Where(k => Get(k) == null).ToList();
             if (missing.Count > 0) { error = "Cloud host mode needs these environment variables: " + string.Join(", ", missing) + "."; return null; }
@@ -86,7 +89,7 @@ namespace HmmRevive.Launcher
         /// <summary>Runs the lobby until the guard, the orchestrator or the host ends it; returns the process exit code (0).</summary>
         public static int Run(CloudHostConfig cfg, int tickMs = 5000)
         {
-            var lobby = new Lobby(cfg.LobbyPort, cfg.GamePort, Builds.Steam) { Cloud = true, Region = cfg.Region };
+            var lobby = new Lobby(cfg.LobbyPort, cfg.GamePort, Builds.Steam) { Cloud = true, Region = cfg.Region, ServerGame = GameDownload.FromFile(cfg.GameStatusFile) };
             lobby.SetHostToken(cfg.HostToken);
             lobby.SetPassword(cfg.Password);
             lobby.SetVisibility(cfg.Visibility);
