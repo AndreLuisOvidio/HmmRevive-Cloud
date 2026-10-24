@@ -551,6 +551,24 @@ function renderCloudBar(L, amHost) {
     `<label><span class="hint">${t("cloud_visibility")}</span> <select id="cloud-vis"><option value="public" ${L.visibility === "private" ? "" : "selected"}>${t("cloud_vis_public")}</option><option value="private" ${L.visibility === "private" ? "selected" : ""}>${t("cloud_vis_private")}</option></select></label>` : ""));
 }
 
+// A cloud lobby opens while its server is still downloading the game: every member sees how far it is, and matches wait.
+const SG_REASONS = { "no storage token": "sg_r_token", "the game for this version is not in storage": "sg_r_missing",
+  "the download of the game was cut": "sg_r_cut", "the downloaded game has no HMM.exe": "sg_r_broken" };
+function renderServerGame(L, amHost) {
+  const panel = $("#server-game"), G = L.serverGame;
+  panel.hidden = !G || G.state === "ready";
+  if (panel.hidden) return;
+  panel.classList.toggle("failed", G.state === "failed");
+  if (G.state === "failed") {
+    paint(panel, `<div class="pg-title">${t("sg_failed_title")}</div><div class="pg-line">${esc(SG_REASONS[G.reason] ? t(SG_REASONS[G.reason]) : G.reason || "")}</div>`
+      + `<div class="pg-detail">${t("sg_failed_detail")}</div>`);
+    return;
+  }
+  const left = G.secondsLeft >= 0 ? " · " + t("sg_left", G.secondsLeft) : "";
+  paint(panel, `<div class="pg-title">${t("sg_title")}</div><div class="pg-bar"><div class="pg-fill${G.percent ? "" : " busy"}" style="width:${Math.max(3, G.percent)}%"></div></div>`
+    + `<div class="pg-line">${t("sg_progress", G.percent)}${left}</div><div class="pg-detail">${t(amHost ? "sg_hint_host" : "sg_hint_guest")}</div>`);
+}
+
 function renderLobby() {
   const L = S.lobby;
   const me = L.members.find((m) => m.id === L.me) || {};
@@ -580,11 +598,13 @@ function renderLobby() {
       : me.team === "none" ? t("running_hosting") : t("running_next");
   } else {
     const waiting = L.members.filter((m) => isPlayer(m) && !m.ready).map((m) => m.name);
-    st = L.cantStart ? tr(L.cantStart) : waiting.length ? t(waiting.length === 1 ? "waiting_for" : "waiting_for_n", waiting.join(", ")) : L.autoStart ? t("everyone_ready") : t("everyone_ready_host");
+    const sg = L.serverGame && L.serverGame.state !== "ready" ? L.serverGame.state : ""; // the panel above tells the details
+    st = sg ? t(sg === "failed" ? "sg_failed_title" : "sg_wait") : L.cantStart ? tr(L.cantStart) : waiting.length ? t(waiting.length === 1 ? "waiting_for" : "waiting_for_n", waiting.join(", ")) : L.autoStart ? t("everyone_ready") : t("everyone_ready_host");
   }
   const status = $("#lobby-status");
   status.className = cls;
-  paint(status, esc(st) + (L.message && L.phase === "lobby" ? ` <span class="hint">· ${esc(tr(L.message))}</span>` : ""));
+  const sgFailed = L.serverGame && L.serverGame.state === "failed";
+  paint(status, esc(st) + (L.message && L.phase === "lobby" && !sgFailed ? ` <span class="hint">· ${esc(tr(L.message))}</span>` : ""));
 
   for (const team of ["blue", "red"]) {
     paint($("#slots-" + team), slotsHtml(L, team, me, amHost));
@@ -592,6 +612,7 @@ function renderLobby() {
     paint($("#switch-" + team), L.phase === "lobby" && !L.draft && me.team && me.team !== team && !full ? `<button data-team="${team}">${t("switch_here")}</button>` : "");
   }
   renderCloudBar(L, amHost);
+  renderServerGame(L, amHost);
   renderDraft(L, me);
   renderSpecs(L, me, amHost);
   renderChat(L);
@@ -654,6 +675,7 @@ function renderLobby() {
       .map((s) => [String(s), s ? t("draft_seconds", s) : t("draft_time_off")]), String(H.draftTime));
     $("#start").hidden = locked;
     $("#start").disabled = !!L.cantStart;
+    $("#start").title = L.cantStart ? tr(L.cantStart) : "";
     $("#start").textContent = L.nextIsDraft ? t("start_draft") : t("start_now");
     $("#stop").hidden = !locked;
     $("#stop").textContent = L.phase === "draft" ? t("stop_draft") : t("stop_match");

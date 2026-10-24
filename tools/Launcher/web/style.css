@@ -384,3 +384,7 @@ p.banner { display: block; }
 .banner details summary { cursor: pointer; }
 code.cmd { user-select: all; padding: 4px 8px; background: var(--panel-2); border-radius: 6px; word-break: break-all; }
 pre.changelog { max-height: 240px; overflow: auto; white-space: pre-wrap; font: inherit; font-size: 13px; margin: 8px 0 0; }
+/* A cloud lobby's server still downloading the game (CREATE-11). */
+.server-game { margin: 8px 0; border-color: #7cc4ff55; }
+.server-game.failed { border-color: #ff6b6b88; }
+.server-game.failed .pg-title { color: #ff6b6b; }
