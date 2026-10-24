@@ -11,7 +11,16 @@
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <PathMap>$(MSBuildProjectDirectory)=/_/</PathMap>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <!-- Where the launcher looks for updates: the HmmRevive-Cloud releases by their GitHub repository id (stays right
+         if the repository is renamed). tools/make_friend_kit.sh passes UPDATE_RELEASES_URL to build for another one. -->
+    <UpdateReleasesUrl Condition="'$(UpdateReleasesUrl)' == ''">https://api.github.com/repositories/1404819524/releases</UpdateReleasesUrl>
   </PropertyGroup>
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>UpdateReleasesUrl</_Parameter1>
+      <_Parameter2>$(UpdateReleasesUrl)</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
   <ItemGroup>
     <Reference Include="System.Web.Extensions" />
     <Reference Include="System.Net.Http" />

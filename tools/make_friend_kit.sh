@@ -33,7 +33,9 @@ fi
 if ! out=$(dotnet publish tools/Patcher -c Release -r win-x64 --self-contained -p:PublishSingleFile=true \
     -p:EnableCompressionInSingleFile=true -o build/patcher-kit -v q -nologo 2>&1); then echo "$out" | grep -E " error " | sort -u; echo "PATCHER PUBLISH FAILED"; exit 1; fi
 cp build/patcher-kit/Patcher.exe "$KIT/"
-if ! out=$(dotnet build tools/Launcher -c Release -o build/launcher-kit -v q -nologo -p:InformationalVersion="$V$SUFFIX" 2>&1); then echo "$out" | grep -E " error " | sort -u; echo "LAUNCHER BUILD FAILED"; exit 1; fi
+# Updates come from the HmmRevive-Cloud releases unless UPDATE_RELEASES_URL names another releases API
+# (e.g. https://api.github.com/repos/<owner>/<repo>/releases).
+if ! out=$(dotnet build tools/Launcher -c Release -o build/launcher-kit -v q -nologo -p:InformationalVersion="$V$SUFFIX" ${UPDATE_RELEASES_URL:+-p:UpdateReleasesUrl="$UPDATE_RELEASES_URL"} 2>&1); then echo "$out" | grep -E " error " | sort -u; echo "LAUNCHER BUILD FAILED"; exit 1; fi
 cp build/launcher-kit/HMM-Revive.exe build/launcher-kit/HMM-Revive.exe.config "$KIT/"
 cp tools/friend-kit/* launcher/skins.txt "$KIT/"
 sed -i "s/@VERSION@/$LABEL/" "$KIT/README.txt" "$KIT/LEIA-ME.txt"

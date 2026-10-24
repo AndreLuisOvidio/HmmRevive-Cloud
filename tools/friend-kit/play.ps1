@@ -11,7 +11,7 @@ function Get-ModVersion($dll) {
     if ($v -match '^\d+\.\d+$') { return $v } else { return "pre-1.0" }
 }
 $kitVersion = Get-ModVersion (Join-Path $kit "mod\HmmRevive.dll")
-Write-Host "HMM Revive $kitVersion"
+Write-Host "HMM Revive Cloud $kitVersion"
 # The game's native logger can't open files under a path with non-ASCII letters (e.g. a Windows user name with an accented or Turkish letter)
 # and the game crashes right at start, so stop early with a clear message instead.
 if ($kit -match '[^\x20-\x7E]') {

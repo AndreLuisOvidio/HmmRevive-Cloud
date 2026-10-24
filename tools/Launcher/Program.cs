@@ -98,7 +98,7 @@ namespace HmmRevive.Launcher
                     case "--no-update-check": updateCheck = false; break;
                 }
             }
-            Console.Title = "HMM Revive " + Version;
+            Console.Title = "HMM Revive Cloud " + Version;
             Paths.Init(root, instance);
             if (settings != null) Paths.Settings = settings;
             Catalog.Load();
@@ -141,7 +141,7 @@ namespace HmmRevive.Launcher
             _logFile = Path.ChangeExtension(Paths.Settings, ".log"); // launcher-settings.log, fresh each start
             try { File.Delete(_logFile); } catch { }
             string url = $"http://127.0.0.1:{_uiPort}/";
-            Console.WriteLine($"HMM Revive {Version}");
+            Console.WriteLine($"HMM Revive Cloud {Version}");
             Console.WriteLine($"Launcher page: {url}");
             Console.WriteLine("Keep this window open while you play. Close it to quit the launcher (a running match keeps going).");
             Console.WriteLine();

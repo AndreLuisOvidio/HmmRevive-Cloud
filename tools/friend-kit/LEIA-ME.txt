@@ -1,4 +1,4 @@
-HMM Revive kit @VERSION@
+HMM Revive Cloud kit @VERSION@
 ========================
 Jogue Heavy Metal Machines de novo, num servidor privado rodando no PC de um de vocês. Grátis, privado e não oficial.
 Este kit não contém arquivos do jogo; ele cria uma cópia modificada do SEU próprio jogo.

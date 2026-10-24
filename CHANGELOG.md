@@ -2,6 +2,18 @@
 
 Newest first. The version is shown on the first line of every kit window (setup, play, host).
 
+## 1.7 (2026-10-24): HMM Revive Cloud
+
+The first release of **HMM Revive Cloud**, a parallel version of HMM Revive kept by AndreLuisOvidio (the original is
+TheRealRazbi's: github.com/TheRealRazbi/HmmRevive). It is 1.6 with everything below "Cloud lobbies", and from now on it
+updates from its own releases (github.com/AndreLuisOvidio/HmmRevive-Cloud).
+
+- **Name and updates:** the launcher, the kit and its windows say "HMM Revive Cloud"; the launcher looks for updates in
+  the HmmRevive-Cloud releases. Someone building the kit can point it at other releases with `UPDATE_RELEASES_URL`.
+- **Version 1.7 everywhere:** lobbies only take players on 1.7, so a 1.6 kit (the original or an earlier cloud test kit)
+  can't join a 1.7 lobby, and the other way round. Everyone updates to 1.7.
+- The README is now in Portuguese first (`README.md`), English in `README.en.md`.
+
 ## 1.6 (2026-10-18)
 
 Preview. Thanks to AndreLuisOvidio for the automatic updates, and to Lonny for his help with the HMM Private Club.

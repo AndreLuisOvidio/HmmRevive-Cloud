@@ -13,7 +13,7 @@ using System.Threading;
 namespace HmmRevive.Launcher
 {
     /// <summary>
-    /// Checks GitHub Releases for a newer HMM Revive kit and applies it in place (community PR #5).
+    /// Checks GitHub Releases for a newer HMM Revive Cloud kit and applies it in place (community PR #5).
     /// Only the files in the release zip are replaced (exe, mod, patcher, scripts, docs), so game copies (instance*\),
     /// launcher-settings.json and the scripts' own settings stay. Every replaced file is first moved into
     /// .hmmrevive-update-old\ (a running exe can be moved, not overwritten), and moved back if anything fails;
@@ -21,8 +21,19 @@ namespace HmmRevive.Launcher
     /// </summary>
     public static class Updater
     {
-        // The public repo by its GitHub id (stays right if the repo is renamed or moved); --update-url for tests.
-        public static string ReleasesUrl = "https://api.github.com/repositories/1388905016/releases";
+        // The releases this build updates from, set at build time (UpdateReleasesUrl in Launcher.csproj: HmmRevive-Cloud by
+        // its GitHub id, which stays right if the repo is renamed); --update-url for tests.
+        public static string ReleasesUrl = BuiltReleasesUrl();
+
+        private static string BuiltReleasesUrl()
+        {
+            foreach (var a in typeof(Updater).Assembly.GetCustomAttributes(typeof(System.Reflection.AssemblyMetadataAttribute), false))
+            {
+                var m = (System.Reflection.AssemblyMetadataAttribute)a;
+                if (m.Key == "UpdateReleasesUrl" && !string.IsNullOrWhiteSpace(m.Value)) return m.Value;
+            }
+            return "https://api.github.com/repositories/1404819524/releases";
+        }
 
         public static volatile string Status = "";  // "", "checking", "latest", "available", "downloading", "applying", "failed: ..."
         public static volatile string LatestVersion;

@@ -1,117 +1,97 @@
-# HMM Revive
+# HMM Revive Cloud
 
-🇧🇷 **Português:** [README.pt-BR.md](README.pt-BR.md)
+🇺🇸 **English:** [README.en.md](README.en.md)
 
-Play **Heavy Metal Machines** again. Hoplon shut the game's servers down in 2022 and the game is online-only.
-HMM Revive brings it back for free, private matches among friends:
+> **Esta é uma versão paralela, não a original.** O HMM Revive original é do **TheRealRazbi**:
+> [github.com/TheRealRazbi/HmmRevive](https://github.com/TheRealRazbi/HmmRevive). O **HMM Revive Cloud** é um fork mantido
+> por AndreLuisOvidio que segue em paralelo e acrescenta as **salas na nuvem**: o host cria a sala num servidor na
+> internet (Brasil, EUA ou Europa), ninguém precisa de VPN e a sala continua aberta se o host fechar o launcher. Esse
+> recurso também foi proposto ao projeto original
+> ([TheRealRazbi/HmmRevive#6](https://github.com/TheRealRazbi/HmmRevive/pull/6)).
+>
+> - Este kit se atualiza pelas releases **deste** repositório, não pelas do original.
+> - Todos numa sala precisam da mesma versão: um jogador com o HMM Revive original (1.6) não entra numa sala do HMM
+>   Revive Cloud 1.7, e vice-versa.
+> - Problemas desta versão: abra uma issue **aqui**, não no repositório do Razbi.
 
-- a headless **match server** built from the game's own shipped server code (the server scene was never shipped,
-  so the mod rebuilds it at runtime), with bots;
-- **clients connect directly** to that server (the game's built-in developer direct-connect mode), for example over
-  [Radmin VPN](https://www.radmin-vpn.com) or [Tailscale](https://tailscale.com).
+Jogue **Heavy Metal Machines** de novo. A Hoplon desligou os servidores do jogo em 2022, e o jogo só funciona online.
+O HMM Revive traz ele de volta para partidas privadas e gratuitas entre amigos:
 
-Extras: a launcher window (English and Portuguese) to host a lobby, find and join lobbies on your network, pick your
-team, car and skin, and rematch; pick your car and skin at launch, switch either mid-match (`/car` and `/skin` in chat), bot count,
-difficulty and cars per team, out-of-combat repair, ball speed (also mid-match: `/ballspeed 1.5`).
+- um **servidor de partida** sem janela, montado a partir do próprio código de servidor que veio no jogo (a cena do
+  servidor nunca foi distribuída, então o mod reconstrói ela na hora), com bots;
+- os **jogadores conectam direto** nesse servidor (pelo modo de conexão direta de desenvolvedor que já existe no
+  jogo), por exemplo pelo [Radmin VPN](https://www.radmin-vpn.com) ou [Tailscale](https://tailscale.com).
 
-> Unofficial fan project, not affiliated with or endorsed by Hoplon. **No Hoplon code or game files** are in this
-> repository or in the kit: the patcher works on a copy of *your own* game folder (Steam install or not), and that
-> folder is never modified.
+Extras: uma janela de launcher (em português e inglês) para abrir uma sala, achar e entrar em salas na sua rede,
+escolher time, carro e skin, e jogar a revanche; escolha seu carro e sua skin ao entrar, troque os dois no meio da partida (`/car` e `/skin` no chat),
+quantidade, dificuldade e carros dos bots por time, reparo fora de combate, velocidade da bola (também no meio da
+partida: `/ballspeed 1.5`).
 
-## Play
+> Projeto de fã não oficial, sem ligação com a Hoplon e sem aprovação dela. **Nenhum código ou arquivo do jogo da
+> Hoplon** está neste repositório ou no kit: o patcher trabalha numa cópia da *sua própria* pasta do jogo (da Steam
+> ou não), e essa pasta nunca é alterada.
 
-You need Windows and Heavy Metal Machines (build `Release.15.00.250`): from your Steam library, or a copy of the game
-folder anywhere on your PC. Steam doesn't need to be installed or open.
+## Como jogar
 
-1. Download `HMM-Revive-friend-kit-<version>.zip` from [Releases](../../releases).
-2. Unzip it to a folder whose path has **no accented or special letters**, e.g. `C:\HMM-Revive`
-   (the game crashes at start otherwise). The same drive as the game uses no extra disk space.
-3. Open `HMM-Revive.exe`. The first time it offers to set up: it finds the game and builds a patched copy in
+Você precisa de Windows e do Heavy Metal Machines (build `Release.15.00.250`): da sua biblioteca da Steam, ou uma cópia
+da pasta do jogo em qualquer lugar do PC. A Steam não precisa estar instalada nem aberta.
+
+1. Baixe o `HMM-Revive-friend-kit-<versão>.zip` em [Releases](../../releases).
+2. Descompacte numa pasta cujo caminho **não tenha acentos nem letras especiais**, por exemplo `C:\HMM-Revive`
+   (senão o jogo fecha ao abrir). No mesmo disco do jogo, não gasta espaço extra.
+3. Abra o `HMM-Revive.exe`. Na primeira vez ele oferece a instalação: encontra o jogo e cria uma cópia modificada em
    `.\instance`.
-4. One person clicks **Host** and opens a lobby; the others see it under **Play** (or type the host's address) and
-   join. Everyone picks team, car and skin and clicks Ready, and the match starts. After it, you're all back in the
-   lobby for a rematch.
-   Players reach the host over [Radmin VPN](https://www.radmin-vpn.com) (the easiest and most reliable so far),
-   [Tailscale](https://tailscale.com) or [ZeroTier](https://www.zerotier.com) (or the same home network). `host.bat` and `play.bat` still work too.
+4. Uma pessoa clica em **Hospedar** e abre uma sala; os outros veem a sala em **Jogar** (ou digitam o endereço do host)
+   e entram. Cada um escolhe time, carro e skin e clica em Pronto, e a partida começa. Depois dela, todo mundo volta
+   para a sala para a revanche.
+   Os jogadores chegam no host pelo [Radmin VPN](https://www.radmin-vpn.com) (o mais fácil e estável até agora),
+   [Tailscale](https://tailscale.com) ou [ZeroTier](https://www.zerotier.com) (ou pela
+   mesma rede de casa). O `host.bat` e o `play.bat` continuam funcionando.
 
-The step-by-step guide, including hosting over Tailscale, is in the kit and here:
-[README.txt](tools/friend-kit/README.txt) (English), [LEIA-ME.txt](tools/friend-kit/LEIA-ME.txt) (Português).
-The version (e.g. `HMM Revive 1.2`) is at the top of the launcher window; mention it when you report a problem.
-What changed in each version: [CHANGELOG.md](CHANGELOG.md) (also in the kit as `CHANGELOG.txt`).
-In a match, type `/cars` in chat to list the cars and `/car <name>` to switch, or `/skins` and `/skin <number>` for
-your skin (the change happens while you're dead or between rounds).
+O passo a passo completo, incluindo como hospedar pelo Tailscale, está no kit e aqui:
+[LEIA-ME.txt](tools/friend-kit/LEIA-ME.txt) (Português), [README.txt](tools/friend-kit/README.txt) (English).
+A versão (ex.: `HMM Revive 1.2`) aparece no topo da janela do launcher; diga qual é quando reportar um problema. O que mudou em cada versão: [CHANGELOG.md](CHANGELOG.md) (em inglês; no kit como `CHANGELOG.txt`).
+Na partida, digite `/cars` no chat para ver os carros e `/car <nome>` para trocar, ou `/skins` e `/skin <número>`
+para a skin (a troca acontece enquanto você está morto ou entre os rounds).
 
-### Cloud lobbies (no VPN)
+### Salas na nuvem (sem VPN)
 
-Instead of hosting on your PC, the host can choose **Host, In the cloud**. The lobby then runs on a server created for it:
-nobody needs Radmin, Tailscale or ZeroTier, and the lobby keeps going if the host closes the launcher. The server is deleted a
-few minutes after the last player leaves, or after 3 hours at most.
+Em vez de hospedar no seu PC, o host pode escolher **Hospedar, Na nuvem**. A sala passa a rodar em um servidor criado só para
+ela: ninguém precisa de Radmin, Tailscale ou ZeroTier, e a sala continua aberta se o host fechar o launcher. O servidor é
+apagado alguns minutos depois que o último jogador sai, ou depois de 3 horas no máximo.
 
-- **Creating one** needs an *invite key* from whoever runs the cloud. Paste it once in the Host screen's cloud option (it is
-  saved on your PC). Each key may have two cloud lobbies open at once. The host chooses who can find the lobby ("Anyone" lists
-  it in Play, "Only people with the code" does not) and may set a password.
-- **Joining** needs no key. Cloud lobbies appear in **Play** with a cloud badge (and a lock when they ask for a password), or
-  type the lobby's six-character code (for example `a1b2c3`) or its `https://` address in the join box.
-- **Rejoining:** if you close the launcher while your cloud lobby is open, the Host screen offers to take your seat back.
-- **Region:** Brazil, United States or Europe (Madrid); pick the one nearest to most players. A lobby opens in about 70 seconds
-  in Brazil and about two minutes elsewhere; for its first seconds the server is still getting the game ready, which the
-  lobby shows to everyone, and the match starts once it is ready.
-- Everyone needs the same HMM Revive version. Cloud lobbies play the Steam build.
+- **Para criar** você precisa de uma *chave de convite* de quem cuida da nuvem. Cole a chave uma vez na opção "Na nuvem" da
+  tela Hospedar (ela fica salva no seu PC). Cada chave pode ter duas salas na nuvem abertas ao mesmo tempo. O host escolhe quem
+  pode encontrar a sala ("Qualquer pessoa" mostra em Jogar, "Só quem tiver o código" não mostra) e pode definir uma senha.
+- **Para entrar** não precisa de chave. As salas na nuvem aparecem em **Jogar** com o selo de nuvem (e um cadeado quando pedem
+  senha), ou digite o código de seis caracteres da sala (por exemplo `a1b2c3`) ou o endereço `https://` dela na caixa de entrar.
+- **Voltar:** se você fechar o launcher com a sua sala na nuvem aberta, a tela Hospedar oferece voltar para o seu lugar.
+- **Região:** Brasil, EUA ou Europa (Madri); escolha a mais perto da maioria dos jogadores. A sala abre em cerca de 70 segundos
+  no Brasil e uns dois minutos nas outras; nos primeiros segundos o servidor ainda está preparando o jogo, a sala mostra isso
+  para todos, e a partida começa quando ele fica pronto.
+- Todos precisam da mesma versão do HMM Revive. As salas na nuvem usam a versão da Steam.
 
-**Security:** the match server and the lobby have no real authentication. Anyone who can reach their ports (UDP 9696
-for the game, TCP/UDP 9697 for the lobby) can join while they run. Share them over Radmin VPN, Tailscale or ZeroTier (the kit
-README shows how to limit Tailscale shared users to those ports), and close the lobby after playing.
+**Segurança:** o servidor de partida e a sala não têm autenticação de verdade. Qualquer pessoa que alcance as portas
+deles (UDP 9696 para o jogo, TCP/UDP 9697 para a sala) pode entrar enquanto estão abertos. Compartilhe pelo Radmin VPN,
+Tailscale ou ZeroTier (o LEIA-ME do kit mostra como liberar só essas portas para quem você convidou no Tailscale) e feche a sala
+depois de jogar.
 
-## Known limits
+## Limitações conhecidas
 
-- No in-game main menu: the launcher replaces it (lobby, rematch). "Exit game" closes the game.
-- The in-match shop is gone (Hoplon removed it from the game); cars keep their base stats.
-- If your connection times out, the game can drop you into its old main menu, which says you're banned for an
-  inappropriate name. Nobody is banned (there are no official servers anymore): close the game and join again.
-- Out-of-combat repair (7% max HP per second after 5 s without damage) uses our own values, not Hoplon's, and may
-  still be tuned.
+- Não tem menu principal dentro do jogo: o launcher faz esse papel (sala, revanche). "Exit game" fecha o jogo.
+- A loja dentro da partida não existe mais (a Hoplon tirou do jogo); os carros ficam com os atributos base.
+- Se a sua conexão cair por tempo esgotado, o jogo pode te jogar no antigo menu principal, que diz que você foi banido
+  por nome impróprio. Ninguém foi banido (não existem mais servidores oficiais): feche o jogo e entre de novo.
+- O reparo fora de combate (7% da vida máxima por segundo depois de 5 s sem levar dano) usa valores nossos, não os da
+  Hoplon, e ainda pode ser ajustado.
 
-## Build from source
+## Compilar a partir do código
 
-Requirements: Heavy Metal Machines from Steam, the .NET 8 SDK (builds the patcher; the mod targets .NET 3.5 against
-the game's own DLLs, which are never copied or committed), Git Bash and PowerShell.
-If the game isn't in the default Steam folder, set `HMM_GAME_DIR` (build scripts) and `GameManaged` (mod project).
+Veja a seção "Build from source" do [README em inglês](README.en.md#build-from-source). Contribuições são bem-vindas;
+nunca inclua código descompilado do jogo, arquivos do jogo ou arquivos do jogo modificados.
 
-```bash
-tools/build.sh                     # build mod + patcher, create/refresh the patched copy in ./instance
-tools/test_match.sh 1 150          # smoke test: headless server + 1 hidden, muted client, prints logs
-tools/make_friend_kit.sh           # build/HMM-Revive-friend-kit-<version>.zip
-```
-`build/launcher/HMM-Revive.exe` is the launcher (source in `tools/Launcher`, page in `tools/Launcher/web`); run from
-the repo it uses `./instance`.
+## Licença
 
-Run a match from the repo:
-```powershell
-tools/run_server.ps1 -Players 2 -SameTeam -RedBots 4 -BluBots 2   # headless, UDP 9696
-tools/run_client.ps1 -Name Player -Ip 100.x.y.z -Car stingray      # visible game window
-```
-- `-Players`: humans the server waits for. `-RedBots/-BluBots`: bots per team, up to 4 cars per team.
-- `-RedDifficulty/-BluDifficulty easy|medium|hard|auto`: bot AI per team (`auto` is the game's own pick).
-- `-SameTeam` puts all humans on Blue (otherwise they alternate). `-Car`: car by name, codename or number.
-- `-Skin` (client): skin number from `launcher/skins.txt` (0 = original), name or `random`.
-  `-RedBotCars/-BluBotCars` (server): bot cars in slot order, e.g. `"wildfire,photon,16"`, or `random`.
-- `-Score N` (server and clients): points to win. Client: `-Width/-Height`, `-Windowed/-Fullscreen`.
-- Or use the menus: `launcher/host.bat` and `launcher/join.bat` (answers are saved in `launcher/settings.json`).
-- The host must allow inbound UDP 9696 for `instance\HMM.exe` in Windows Firewall.
-
-| path | what |
-|---|---|
-| `mod/HmmRevive/` | the mod: server bootstrap, hooks, car/skin choice and swap, repair, watchdog logs |
-| `tools/Launcher/` | `HMM-Revive.exe`: local web launcher (host a lobby, find and join, rematch) |
-| `tools/Patcher/` | Mono.Cecil patcher: hardlinked copy of the game + IL hooks into `Assembly-CSharp-firstpass.dll` |
-| `tools/friend-kit/` | scripts and READMEs of the kit zip |
-| `launcher/` | host/join menus for running from the repo |
-| `docs/HOW-IT-WORKS.md` | how the game and the mod work |
-
-Contributions are welcome. Never include decompiled game code, game files or patched game files.
-
-## License
-
-This project's code is licensed under the [Mozilla Public License 2.0](LICENSE). It covers only the code in this
-repository, not Heavy Metal Machines, which belongs to Hoplon. Heavy Metal Machines is a trademark of Hoplon.
-Free and non-commercial: please don't sell access to it or redistribute Hoplon's files, patched or not.
+O código deste projeto está sob a [Mozilla Public License 2.0](LICENSE). Ela cobre só o código deste repositório, não
+o Heavy Metal Machines, que pertence à Hoplon. Heavy Metal Machines é marca registrada da Hoplon.
+Grátis e sem fins comerciais: por favor, não venda acesso nem redistribua os arquivos da Hoplon, modificados ou não.

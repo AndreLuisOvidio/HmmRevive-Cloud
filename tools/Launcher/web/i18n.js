@@ -420,11 +420,11 @@ const STR = {
 
   // updates
   updates: ["Updates", "Atualizações"],
-  updates_hint: ["This is HMM Revive {0}. The launcher looks for a newer version on GitHub each time it starts and can update itself; your settings and game copies stay.",
-    "Este é o HMM Revive {0}. O launcher procura uma versão mais nova no GitHub sempre que abre e pode se atualizar sozinho; suas configurações e cópias do jogo continuam."],
-  updates_dev: ["HMM Revive {0}. Automatic updates only work in a kit folder (unzipped from a release).", "HMM Revive {0}. As atualizações automáticas só funcionam numa pasta do kit (descompactada de uma release)."],
-  update_available: ["HMM Revive {0} is available!", "HMM Revive {0} está disponível!"],
-  update_available_preview: ["HMM Revive {0} (a preview: newest features, less tested) is available!", "HMM Revive {0} (uma preview: novidades, menos testada) está disponível!"],
+  updates_hint: ["This is HMM Revive Cloud {0}. The launcher looks for a newer version on GitHub each time it starts and can update itself; your settings and game copies stay.",
+    "Este é o HMM Revive Cloud {0}. O launcher procura uma versão mais nova no GitHub sempre que abre e pode se atualizar sozinho; suas configurações e cópias do jogo continuam."],
+  updates_dev: ["HMM Revive Cloud {0}. Automatic updates only work in a kit folder (unzipped from a release).", "HMM Revive Cloud {0}. As atualizações automáticas só funcionam numa pasta do kit (descompactada de uma release)."],
+  update_available: ["HMM Revive Cloud {0} is available!", "HMM Revive Cloud {0} está disponível!"],
+  update_available_preview: ["HMM Revive Cloud {0} (a preview: newest features, less tested) is available!", "HMM Revive Cloud {0} (uma preview: novidades, menos testada) está disponível!"],
   update_checking: ["Checking…", "Verificando…"],
   update_latest: ["You have the newest version.", "Você tem a versão mais nova."],
   update_restarting: ["Update installed. The launcher is restarting…", "Atualização instalada. O launcher está reiniciando…"],
