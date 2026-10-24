@@ -189,8 +189,8 @@ T6 → T7 → T8
 
 **Done when**:
 
-- [ ] `index.html`, `app.js`, `style.css` updated; no references to the order fields left
-- [ ] Gate check passes: `dotnet build tools/Launcher -c Release && dotnet test tools/Launcher.Tests`
+- [x] `index.html`, `app.js`, `style.css` updated; no references to the order fields left
+- [x] Gate check passes: `dotnet build tools/Launcher -c Release && dotnet test tools/Launcher.Tests`
 
 **Tests**: none
 **Gate**: build

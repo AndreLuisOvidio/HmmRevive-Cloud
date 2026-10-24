@@ -372,6 +372,7 @@ function render() {
   // Creating or rejoining a cloud lobby from the Host screen: open it as soon as the host seat is taken.
   if (awaitingCloud && S.cloud && S.cloud.state === "ready" && S.lobby) { awaitingCloud = false; return show("lobby"); }
   if (awaitingCloud && S.cloud && S.cloud.state === "failed") awaitingCloud = false;
+  renderDraftScreen(); // over every view while the lobby drafts
   if (view === "play") renderPlay();
   if (view === "host") renderHost();
   if (view === "lobby" && inLobby) renderLobby();
@@ -591,7 +592,7 @@ function renderLobby() {
   let st = "", cls = "status";
   if (L.phase === "lobby" && L.countdown >= 0) { st = t(L.nextIsDraft ? "draft_in" : "starting_in", L.countdown); cls += " count"; }
   else if (L.phase === "starting") { st = t("starting_server"); cls += " live"; }
-  else if (L.phase === "draft") { st = draftStatus(L, me); cls += " live"; }
+  else if (L.phase === "draft") { st = t("drafting"); cls += " live"; }
   else if (L.phase === "playing") {
     cls += " live";
     st = me.inMatch ? (S.gameRunning ? t(me.team === "spec" ? "running_watching" : "running_good_luck") : t("running_no_game"))
@@ -613,15 +614,14 @@ function renderLobby() {
   }
   renderCloudBar(L, amHost);
   renderServerGame(L, amHost);
-  renderDraft(L, me);
   renderSpecs(L, me, amHost);
   renderChat(L);
   $("#lobby-bottom").classList.toggle("guest", !amHost);
 
-  // my controls (after a draft: one of my team's cars)
+  // my controls (after a draft: the car of my position, changed only by a trade in the draft)
   const car = lobbyCar(L, me);
   const drafted = !!(L.draft && L.draft.done);
-  fill($("#lobby-car"), L.draft ? pool(L.draft, me.team).map((c) => [String(c), carName(c)]) : carOptions(), car);
+  fill($("#lobby-car"), L.draft ? [[String(car), carName(car)]] : carOptions(), car);
   fill($("#lobby-skin"), skinOptions(car), (S.settings.skins || {})[carName(car)] ?? "0");
   skinPic($("#lobby-skin-pic"), car, (S.settings.skins || {})[carName(car)] ?? "0");
   const locked = L.phase !== "lobby";
@@ -633,7 +633,8 @@ function renderLobby() {
   $("#legacy-pick").hidden = !playing || !legacy;
   $("#lobby-drive-row").hidden = !playing || !legacy;
   fill($("#lobby-drive"), DRIVES(), S.settings.drive || "mouse");
-  $("#lobby-car").disabled = $("#lobby-skin").disabled = locked;
+  $("#lobby-car").disabled = locked || !!L.draft;
+  $("#lobby-skin").disabled = locked;
   const ready = $("#ready");
   ready.hidden = !playing;
   ready.disabled = locked;
@@ -665,12 +666,8 @@ function renderLobby() {
     $("#h-spec").checked = H.spectators;
     $("#h-draft").checked = H.draft;
     $("#h-spec").disabled = locked;
-    $("#h-draft").disabled = $("#h-bans").disabled = $("#h-picks").disabled = $("#h-dtime").disabled = locked;
+    $("#h-draft").disabled = $("#h-dtime").disabled = locked;
     $("#h-order-box").hidden = !H.draft;
-    for (const [id, key] of [["#h-bans", "draftBans"], ["#h-picks", "draftPicks"]]) {
-      const order = $(id);
-      if (document.activeElement !== order && order.value !== H[key]) order.value = H[key];
-    }
     fill($("#h-dtime"), DRAFT_TIMES.concat(DRAFT_TIMES.includes(H.draftTime) ? [] : [H.draftTime])
       .map((s) => [String(s), s ? t("draft_seconds", s) : t("draft_time_off")]), String(H.draftTime));
     $("#start").hidden = locked;
@@ -735,61 +732,162 @@ function slotsHtml(L, team, me, amHost) {
 const canSwapTeams = (L) => L.phase === "lobby" && !L.draft;
 
 // ----- chat -----
-function renderChat(L) {
-  const log = $("#chat-log");
+function chatHtml(L) {
   const lines = L.chat || [];
-  const html = lines.length ? lines.map((c) => c.sys
+  return lines.length ? lines.map((c) => c.sys
     ? `<p class="sys">${esc(t("chat_" + c.text, c.name))}</p>`
     : `<p><b class="${esc(c.team)}">${esc(c.name)}:</b> ${esc(c.text)}</p>`).join("") : `<p class="sys">${t("chat_empty")}</p>`;
+}
+
+function renderChat(L, log = $("#chat-log")) {
   const atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 40;
-  paint(log, html);
+  paint(log, chatHtml(L));
   if (atBottom) log.scrollTop = log.scrollHeight;
 }
 
-// ----- draft -----
-function draftStatus(L, me) {
-  const D = L.draft;
-  const turn = D && D.turns[D.step];
-  if (!turn) return "";
-  const what = nCars(turn.count);
-  const clock = D.secondsLeft >= 0 ? " " + t("draft_clock", D.secondsLeft) : "";
-  if (me.team === turn.team) return t(turn.pick ? "draft_your_pick" : "draft_your_ban", what) + clock;
-  return t(turn.pick ? "draft_their_pick" : "draft_their_ban", teamName(turn.team), what) + clock;
+// ----- draft: the whole window while the lobby drafts, like LoL's champion select -----
+let dsGrid = false; // after my pick: show the cars instead of my car
+let dsChat = false; // the chat drawer
+let dsPending = null; // { car, at }: the car I just clicked, shown before the lobby answers
+let dsMarking = null; // that click's request (a lock waits for it)
+const initials = (name) => name.replace(/[^A-Za-z ]/g, "").split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+// A car's picture (made from the player's own game files), or its initials when there are none.
+const dsPic = (car, skin) => S.images
+  ? `<img src="/img/skins/${encodeURIComponent(car)}-${/^\d+$/.test(String(skin)) ? skin : 0}.jpg" alt="" loading="lazy">`
+  : `<span class="ds-ini">${esc(initials(carName(car)))}</span>`;
+const mySkinFor = (car) => (S.settings.skins || {})[carName(car)] ?? "0";
+const dsSeats = (D, team) => (D.seats && D.seats[team]) || [];
+const dsMine = (D, me) => (isPlayer(me) ? dsSeats(D, me.team).find((s) => s.id === me.id) : null);
+const dsName = (L, s) => { const m = !s.bot && L.members.find((x) => x.id === s.id); return m ? m.name : t("bot"); };
+
+function renderDraftScreen() {
+  const L = S.lobby, D = L && L.draft;
+  const on = !!(D && L.phase === "draft");
+  $("#draft-screen").hidden = !on;
+  document.body.classList.toggle("drafting", on);
+  if (!on) { dsGrid = false; dsPending = null; return; }
+  const me = L.members.find((m) => m.id === L.me) || {};
+  const mine = dsMine(D, me);
+  const A = D.first, B = A === "blue" ? "red" : "blue";
+  const turn = D.stage === "turns" ? D.turns[D.step] : null;
+  if (dsPending && (Date.now() - dsPending.at > 3000 || (mine && (mine.mark === dsPending.car || mine.intent === dsPending.car)))) dsPending = null;
+
+  // What is happening now, and the clock
+  let title, sub, side = "";
+  if (D.stage === "plan") { title = t("ds_plan"); sub = t("ds_plan_sub", teamName(A)); }
+  else if (turn) {
+    side = turn.team;
+    title = t(!turn.pick ? "ds_ban_1" : turn.positions.length > 1 ? "ds_pick_2" : "ds_pick_1", teamName(turn.team));
+    sub = t("ds_turn_of", turn.positions.map((p) => dsName(L, dsSeats(D, turn.team)[p - 1])).join(t("ds_and")));
+  } else { title = t("ds_final"); sub = t("ds_final_sub"); }
+  const clock = D.secondsLeft >= 0 ? `<div class="ds-clock${D.secondsLeft <= 5 && D.stage !== "plan" ? " low" : ""}">${D.secondsLeft}</div>` : "";
+  paint($("#ds-head"), `<div class="ds-phase ${side}"><b>${esc(title)}</b><span>${esc(sub)}</span></div>${clock}`);
+  const said = (L.chat || []).filter((c) => !c.sys).length;
+  paint($("#ds-tools"), `<button data-dchat="1"${dsChat ? ' class="on"' : ""}>${t("chat_title")} (${said})</button>`
+    + (S.hosting ? `<button class="danger" data-dstop="1">${t("stop_draft")}</button>` : "")
+    + `<button class="ghost danger" data-dleave="1">${t("leave")}</button>`);
+
+  // The order: Team 1's turns and Team 2's, done ones faded
+  paint($("#ds-chips"), D.turns.map((x, i) => {
+    const state = D.stage === "turns" && i === D.step ? " now" : D.stage !== "plan" && (D.stage !== "turns" || i < D.step) ? " past" : "";
+    return `<span class="ds-chip ${x.team}${state}">${t(x.team === A ? "ds_team1" : "ds_team2")} · ${t(x.pick ? "ds_chip_pick" : "ds_chip_ban")}${x.positions.length > 1 ? " ×2" : ""}</span>`;
+  }).join(""));
+
+  // The two teams, Team 1 on the left
+  for (const [id, team] of [["#ds-left", A], ["#ds-right", B]])
+    paint($(id), `<div class="ds-team-h ${team}">${esc(teamName(team))}<small>${t(team === A ? "ds_team1_starts" : "ds_team2")}</small></div>`
+      + dsSeats(D, team).map((s) => dsSeatHtml(L, D, team, s, me, mine)).join(""));
+
+  // Requests from teammates: to me (answer) and mine (waiting)
+  const reqs = mine ? D.requests || [] : [];
+  const seatOf = (pos) => dsSeats(D, me.team)[pos - 1] || {};
+  paint($("#ds-reqs"), reqs.filter((r) => r.to === mine.pos).map((r) => `<div class="ds-req"><span>${esc(r.kind === "swap"
+      ? t("ds_req_swap", dsName(L, seatOf(r.from)), r.from, r.to)
+      : t("ds_req_trade", dsName(L, seatOf(r.from)), carName(seatOf(r.from).car), carName(mine.car)))}</span>`
+      + `<button class="primary" data-danswer="${r.id}:1">${t("ds_accept")}</button><button data-danswer="${r.id}:0">${t("ds_decline")}</button></div>`)
+    .concat(reqs.filter((r) => r.from === mine.pos).map((r) => `<div class="ds-req out">${esc(t("ds_req_waiting", dsName(L, seatOf(r.to)), r.secondsLeft))}</div>`)).join(""));
+
+  // The middle: my car big with its skins once I have one, else the cars
+  paint($("#ds-body"), mine && mine.car && !dsGrid ? dsShowHtml(mine.car) : dsGridHtml(L, D, me, mine));
+
+  // What I can do now
+  let actions;
+  if (mine && mine.acting) {
+    const car = (dsPending && dsPending.car) || mine.mark;
+    actions = `<button class="primary big" data-dlock="1"${car ? "" : " disabled"}>${esc(car ? t(turn.pick ? "ds_lock_pick" : "ds_lock_ban", carName(car)) : t(turn.pick ? "ds_choose_pick" : "ds_choose_ban"))}</button>`
+      + `<span class="hint">${t("ds_hidden_hint")}</span>`;
+  } else if (D.stage === "final" && isPlayer(me)) {
+    actions = `<button class="ready big${me.ready ? " on" : ""}" data-dready="1">${t(me.ready ? "ready_on" : "ready")}</button><span class="hint">${t("ds_final_hint")}</span>`;
+  } else if (!isPlayer(me)) actions = `<span class="hint">${t("ds_watching")}</span>`;
+  else if (D.stage === "plan") actions = `<span class="hint">${t("ds_plan_hint")}</span>`;
+  else actions = `<span class="hint">${t(turn && turn.team === me.team ? "ds_team_choosing" : "ds_other_choosing")}</span>`;
+  paint($("#ds-actions"), actions);
+
+  $("#ds-chat").hidden = !dsChat;
+  if (dsChat) renderChat(L, $("#ds-chat-log"));
 }
 
-function renderDraft(L, me) {
-  const D = L.draft;
-  const el = $("#draft");
-  el.hidden = !D;
-  if (!D) return paint(el, "");
-  const turn = D.turns[D.step];
-  const myTurn = !!turn && L.phase === "draft" && me.team === turn.team;
-  const A = D.first, B = A === "blue" ? "red" : "blue";
-  const turns = D.turns.map((x, i) => `<span class="turn ${x.team}${i === D.step && !D.done ? " now" : i < D.step ? " past" : ""}">`
-    + `${x.team === A ? "A" : "B"} · ${t(x.pick ? "draft_pick_n" : "draft_ban_n", x.count)}</span>`).join("");
-  const chips = (list) => list.length ? list.map((c) => `<span class="dcar">${esc(carName(c.car))}</span>`).join("") : `<span class="hint">—</span>`;
-  const side = (team) => `<div class="dteam ${team}"><h3>${esc(teamName(team))} (${team === A ? "A" : "B"})</h3>
-    <div class="dl">${t("draft_bans")}</div><div class="dchips ban">${chips(D.bans.filter((c) => c.team === team))}</div>
-    <div class="dl">${t("draft_picks")}</div><div class="dchips">${chips(D.picks.filter((c) => c.team === team))}</div></div>`;
-  let grid = "";
-  if (!D.done) {
-    const state = (id) => {
-      const b = D.bans.find((c) => c.car === id), p = D.picks.find((c) => c.car === id);
-      if (b) return "banned " + b.team;
-      if (p) return "picked " + p.team;
-      return D.pending.includes(id) ? "sel" : "";
-    };
-    grid = `<div class="grid">${C.cars.map((c) => {
-      const id = String(c.id), st = state(id), free = !st || st === "sel";
-      return `<button class="tile ${st}" data-draft-car="${esc(id)}" ${myTurn && free ? "" : "disabled"}>${esc(c.name)}</button>`;
-    }).join("")}</div>`;
+function dsSeatHtml(L, D, team, s, me, mine) {
+  const myTeam = me.team === team;
+  const m = !s.bot && L.members.find((x) => x.id === s.id);
+  const turn = D.stage === "turns" ? D.turns[D.step] : null;
+  const verb = turn && turn.pick ? "ds_picking" : "ds_banning";
+  let cls = "ds-seat " + team, pic = "", line;
+  if (s.car) { cls += " locked"; pic = dsPic(s.car, m ? m.skin : 0); line = esc(carName(s.car) + (m && m.skin && m.skin !== "0" ? " · " + skinName(s.car, m.skin) : "")); }
+  else if (s.acting) {
+    cls += " acting";
+    const car = myTeam && ((mine && s.pos === mine.pos && dsPending && dsPending.car) || s.mark);
+    if (car) { cls += " hover"; pic = dsPic(car); line = esc(t(verb + "_x", carName(car))); }
+    else line = `<span class="dots">${esc(t(verb))}</span>`;
+  } else if (myTeam && s.intent) { cls += " intent"; pic = dsPic(s.intent); line = esc(t("ds_plans", carName(s.intent))); }
+  else line = esc(t(D.stage === "plan" ? "ds_planning" : "ds_waiting"));
+  const isMe = m && m.id === L.me;
+  if (isMe) cls += " me";
+  const ban = s.ban ? `<span class="ds-ban">${esc(carName(s.ban))}</span>` : "";
+  const ready = D.stage === "final" && m && m.ready ? `<span class="tag ready">${t("tag_ready")}</span>` : "";
+  // On my teammates: swap positions (neither has a car or is choosing) or trade cars (both have one).
+  let btn = "";
+  if (mine && myTeam && s.pos !== mine.pos) {
+    if (!s.bot && !s.car && !mine.car && !s.acting && !mine.acting && (D.stage === "plan" || D.stage === "turns"))
+      btn = `<button class="ds-mini" data-dswap="${s.pos}" title="${esc(t("ds_swap_title"))}">⇄</button>`;
+    else if (s.car && mine.car) btn = `<button class="ds-mini" data-dtrade="${s.pos}" title="${esc(t("ds_trade_title"))}">⇆</button>`;
   }
-  const lock = myTurn ? `<div class="row lockrow"><button class="primary big" id="draft-lock" ${D.pending.length === turn.count ? "" : "disabled"}>${t("draft_lock", D.pending.length, turn.count)}</button>
-    <span class="hint">${t("draft_hidden_hint")}</span></div>` : "";
-  const clock = !D.done && D.secondsLeft >= 0 ? `<span class="dclock${D.secondsLeft <= 10 ? " low" : ""}">${t("draft_seconds", D.secondsLeft)}</span>` : "";
-  paint(el, `<div class="draft-head"><h2>${t("draft_title")}</h2>${clock}<span class="hint">${t("draft_first", teamName(A))}</span></div>
-    <div class="turns">${turns}</div>
-    <div class="draft-body">${side(A)}${grid}${side(B)}</div>${lock}`);
+  return `<div class="${cls}"><div class="ds-pos">${s.pos}</div><div class="ds-av">${pic}</div>`
+    + `<div class="ds-who"><div class="ds-name">${esc(m ? m.name : t("bot"))}${isMe ? ` <i>${t("you_tag")}</i>` : ""}</div><div class="ds-line">${line}</div>${ban}</div>${ready}${btn}</div>`;
+}
+
+function dsGridHtml(L, D, me, mine) {
+  const banned = {}, picked = {}, mates = {};
+  D.bans.forEach((c) => (banned[c.car] = c.team));
+  D.picks.forEach((c) => (picked[c.car] = c.team));
+  const myCar = mine && (dsPending ? dsPending.car : mine.acting ? mine.mark : mine.intent);
+  if (mine) dsSeats(D, me.team).forEach((s) => { const c = s.mark || s.intent; if (c && s.pos !== mine.pos && !s.car) mates[c] = dsName(L, s); });
+  // I can click a car on my turn, or plan one before my pick.
+  const canClick = !!mine && !mine.car && (mine.acting || D.stage === "plan" || D.stage === "turns");
+  const tiles = C.cars.map((c) => {
+    const id = String(c.id);
+    let cls = "ds-tile", tag = "";
+    if (banned[id]) cls += " banned by-" + banned[id];
+    else if (picked[id]) cls += " picked " + picked[id];
+    else if (id === myCar) cls += " sel";
+    else if (mates[id]) { cls += " mate"; tag = mates[id]; }
+    const free = !banned[id] && !picked[id];
+    return `<button class="${cls}" data-dcar="${id}"${free && canClick ? "" : " disabled"}><span class="ds-pic">${dsPic(id)}</span>`
+      + `<span class="ds-nm">${esc(c.name)}</span>${tag ? `<span class="ds-tag">${esc(tag)}</span>` : ""}</button>`;
+  }).join("");
+  return (mine && mine.car ? `<button class="linkbtn" data-dgrid="0">${t("ds_back_car")}</button>` : "") + `<div class="ds-grid">${tiles}</div>`;
+}
+
+function dsShowHtml(car) {
+  const skins = skinsOf(car), cur = mySkinFor(car);
+  const n = /^\d+$/.test(String(cur)) ? +cur : 0, k = skins.length;
+  return `<div class="ds-show"><div class="ds-stage">${dsPic(car, n)}`
+    + `<button class="ds-arr l" data-dskin="${(n - 1 + k) % k}" aria-label="${esc(t("ds_skin_prev"))}">◀</button>`
+    + `<button class="ds-arr r" data-dskin="${(n + 1) % k}" aria-label="${esc(t("ds_skin_next"))}">▶</button>`
+    + `<div class="ds-cap"><b>${esc(carName(car))}</b><span>${esc(skinName(car, String(n)))}</span><em>${t("ds_your_car")}</em></div></div>`
+    + `<div class="ds-skins">${skins.map((s, i) => `<button class="ds-sk${i === n ? " on" : ""}" data-dskin="${i}">`
+      + `${S.images ? `<img src="/img/skins/${encodeURIComponent(car)}-${i}.jpg" alt="" loading="lazy">` : ""}<span>${esc(s)}</span></button>`).join("")}</div>`
+    + `<button class="linkbtn" data-dgrid="1">${t("ds_see_cars")}</button></div>`;
 }
 
 // ----- spectators -----
@@ -939,7 +1037,33 @@ document.addEventListener("click", async (e) => {
   if (b.dataset.swapWith) { const a = swapPick; swapPick = null; return act("host/swap", { a, b: b.dataset.swapWith }); }
   if (b.dataset.moveTo) { const id = swapPick; swapPick = null; return act("host/move", { id, team: b.dataset.moveTo }); }
   if (b.dataset.setupBuild) return act("setup", { build: b.dataset.setupBuild });
-  if (b.dataset.draftCar) return act("lobby/draft", { action: "select", car: b.dataset.draftCar });
+  // The draft screen. A clicked car shows at once; the lock waits for that click to reach the lobby.
+  if (b.dataset.dcar) {
+    dsPending = { car: b.dataset.dcar, at: Date.now() };
+    renderDraftScreen();
+    dsMarking = act("lobby/draft", { action: "mark", car: b.dataset.dcar });
+    return;
+  }
+  if (b.dataset.dlock) { await dsMarking; return act("lobby/draft", { action: "lock" }); }
+  if (b.dataset.dswap) return act("lobby/draft", { action: "swap", target: +b.dataset.dswap }, t("ds_asked"));
+  if (b.dataset.dtrade) return act("lobby/draft", { action: "trade", target: +b.dataset.dtrade }, t("ds_asked"));
+  if (b.dataset.danswer) {
+    const [request, yes] = b.dataset.danswer.split(":");
+    return act("lobby/draft", { action: yes === "1" ? "accept" : "decline", request: +request });
+  }
+  if (b.dataset.dskin !== undefined) {
+    const L = S.lobby, me = L.members.find((m) => m.id === L.me) || {}, mine = L.draft && dsMine(L.draft, me);
+    if (mine && mine.car) return act("settings", { skin: b.dataset.dskin, skinCar: String(mine.car) });
+    return;
+  }
+  if (b.dataset.dgrid) { dsGrid = b.dataset.dgrid === "1"; return renderDraftScreen(); }
+  if (b.dataset.dchat) { dsChat = !dsChat; return renderDraftScreen(); }
+  if (b.dataset.dready) {
+    const me = S.lobby.members.find((m) => m.id === S.lobby.me);
+    return act("lobby/update", { ready: !(me && me.ready) });
+  }
+  if (b.dataset.dstop) { if (confirm(t("confirm_stop_draft"))) return act("host/stop", {}); return; }
+  if (b.dataset.dleave) return $("#leave").click();
   if (b.dataset.bots) {
     const [team, d] = b.dataset.bots.split(":");
     const H = structuredClone(S.hostSetup);
@@ -992,7 +1116,6 @@ document.addEventListener("click", async (e) => {
       return act("lobby/update", { ready: !(me && me.ready) });
     }
     case "relaunch": return act("lobby/relaunch", {});
-    case "draft-lock": return act("lobby/draft", { action: "lock" });
     case "draft-reset":
       if (confirm(t("confirm_draft_reset"))) return act("host/draft-reset", {});
       return;
@@ -1047,6 +1170,14 @@ $("#chat-form").addEventListener("submit", async (e) => {
   if (!text) return;
   input.value = "";
   if (!(await act("lobby/chat", { text })) && !input.value) input.value = text; // not sent: keep it to retry
+});
+$("#ds-chat-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const input = $("#ds-chat-input");
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = "";
+  if (!(await act("lobby/chat", { text })) && !input.value) input.value = text;
 });
 $("#quick-form").addEventListener("submit", (e) => {
   e.preventDefault();
@@ -1107,17 +1238,12 @@ document.addEventListener("change", async (e) => {
     }
     case "s-nov": return act("settings", { showNov: el.checked });
     case "s-preview-updates": return act("settings", { previewUpdates: el.checked });
-    case "h-spec": case "h-draft": case "h-bans": case "h-picks": case "h-dtime": {
+    case "h-spec": case "h-draft": case "h-dtime": {
       const H = structuredClone(S.hostSetup);
       H.spectators = $("#h-spec").checked;
       H.draft = $("#h-draft").checked;
-      H.draftBans = $("#h-bans").value;
-      H.draftPicks = $("#h-picks").value;
       H.draftTime = parseInt($("#h-dtime").value, 10);
-      const r = await act("host/configure", H);
-      const key = { "h-bans": "draftBans", "h-picks": "draftPicks" }[el.id];
-      if (r && key && S.hostSetup[key] !== el.value.trim().toUpperCase().split(/[\s,;]+/).join(" ")) toast(t("draft_order_bad"));
-      return;
+      return act("host/configure", H);
     }
     case "h-plays": {
       if (!el.checked) return act("lobby/update", { team: "none" });
@@ -1170,5 +1296,6 @@ async function poll() {
   const want = location.hash.slice(1); // e.g. #settings
   show(S && S.lobby ? "lobby" : ["play", "host", "settings", "help"].includes(want) ? want : "play");
   setInterval(poll, 700);
+  setInterval(() => { if (S && S.lobby && S.lobby.phase === "draft") poll(); }, 250); // the draft follows every click quickly
   setInterval(() => { if (view === "play" && !document.hidden) discover(); }, 15000);
 })();
