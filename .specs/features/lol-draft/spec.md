@@ -191,13 +191,13 @@ The lobby draft today works per team: a team's turn bans or picks several cars a
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
 | DRAFT-01 | P1: Draft by position (AC1 draw) | Tasks | Pending |
-| DRAFT-02 | P1: Draft by position (AC2 order) | Tasks | Pending |
-| DRAFT-03 | P1: Draft by position (AC3 missing positions) | Tasks | Pending |
-| DRAFT-04 | P1: Draft by position (AC4 planning) | Tasks | Pending |
-| DRAFT-05 | P1: Draft by position (AC5-9 mark and lock) | Tasks | Pending |
-| DRAFT-06 | P1: Draft by position (AC10 time out) | Tasks | Pending |
-| DRAFT-07 | P1: Draft by position (AC11-12 bots and leavers) | Tasks | Pending |
-| DRAFT-08 | P1: Draft by position (AC13 integrity) | Tasks | Pending |
+| DRAFT-02 | P1: Draft by position (AC2 order) | Execute | Implementing |
+| DRAFT-03 | P1: Draft by position (AC3 missing positions) | Execute | Implementing |
+| DRAFT-04 | P1: Draft by position (AC4 planning) | Execute | Implementing |
+| DRAFT-05 | P1: Draft by position (AC5-9 mark and lock) | Execute | Implementing |
+| DRAFT-06 | P1: Draft by position (AC10 time out) | Execute | Implementing |
+| DRAFT-07 | P1: Draft by position (AC11-12 bots and leavers) | Execute | Implementing |
+| DRAFT-08 | P1: Draft by position (AC13 integrity) | Execute | Implementing |
 | DRAFT-09 | P1: What each side sees | Tasks | Pending |
 | DRAFT-10 | P1: Finalization and the match | Tasks | Pending |
 | DRAFT-11 | P2: Swap positions | Tasks | Pending |

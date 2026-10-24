@@ -74,8 +74,8 @@ T6 → T7 → T8
 
 **Done when**:
 
-- [ ] `DraftTests` cover the order, skipped positions, planning lock refusal, mark/lock errors, turn advance, timeouts, bots, gone players, integrity, final stage end
-- [ ] Gate check passes: `dotnet test tools/Launcher.Tests --filter FullyQualifiedName~DraftTests`
+- [x] `DraftTests` cover the order, skipped positions, planning lock refusal, mark/lock errors, turn advance, timeouts, bots, gone players, integrity, final stage end
+- [x] Gate check passes: `dotnet test tools/Launcher.Tests --filter FullyQualifiedName~DraftTests`
 
 **Tests**: unit
 **Gate**: quick
