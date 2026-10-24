@@ -5,8 +5,8 @@ namespace HmmRevive.Launcher
 {
     /// <summary>
     /// What the host sees while a cloud lobby is being created: which of the four steps is running, a progress percentage and
-    /// how long is left. The durations are what was measured on the real stack (about 2.5 minutes in total, most of it the
-    /// download of the game image); the screen says so when it takes longer instead of pretending.
+    /// how long is left. The durations are what was measured on the real stack in Brazil (about 70 seconds since the game left
+    /// the image, HmmRevive-server AD-008); the screen says so when it takes longer instead of pretending.
     /// </summary>
     public static class CloudProgress
     {
@@ -14,10 +14,13 @@ namespace HmmRevive.Launcher
         /// the server; pull: the game image is downloaded; start: containers and lobby start; connect: the name and the secure link.</summary>
         public static readonly string[] Steps = { "contact", "reserve", "pull", "start", "connect" };
 
-        // Typical seconds per step, from the measured creations (about 2.6 minutes in total, the download being most of it).
-        private static readonly int[] Typical = { 8, 25, 90, 25, 10 };
-        private const int Total = 158;
-        private const double SlowAfter = 1.6; // times the typical total: past this the estimate is dropped
+        // Typical seconds per step, measured in Brazil South on 2026-10-24 (lobby open after 70 s). The image is small now; the
+        // game itself downloads after the lobby opens, and the lobby screen shows that part (CREATE-11).
+        private static readonly int[] Typical = { 4, 10, 28, 12, 16 };
+        private const int Total = 70;
+        // Times the typical total: past this the estimate is dropped. East US and Spain Central open in 105-115 s, which
+        // must not count as slow.
+        private const double SlowAfter = 2.0;
 
         /// <summary>The orchestrator's creation step ("reserving", "starting", "connecting") as one of <see cref="Steps"/>.</summary>
         public static string FromOrchestrator(string step) =>
