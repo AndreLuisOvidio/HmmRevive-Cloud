@@ -166,8 +166,8 @@ T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Both files forward the two fields
-- [ ] Gate check passes: `dotnet build tools/Launcher -c Release && dotnet test tools/Launcher.Tests`
+- [x] Both files forward the two fields
+- [x] Gate check passes: `dotnet build tools/Launcher -c Release && dotnet test tools/Launcher.Tests`
 
 **Tests**: none
 **Gate**: build

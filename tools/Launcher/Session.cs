@@ -247,10 +247,12 @@ namespace HmmRevive.Launcher
             catch (Exception e) { return e.Message; }
         }
 
-        /// <summary>Draft: select or unselect a car for our team's turn ("select"), or lock the turn in ("lock").</summary>
-        public string DraftAct(string action, string car)
+        /// <summary>Draft: mark or lock a car, ask the teammate in position <paramref name="target"/> to swap or trade
+        /// ("swap", "trade"), or answer a teammate's request ("accept", "decline").</summary>
+        public string DraftAct(string action, string car, int target = 0, int request = 0)
         {
-            try { Post(_base + "/lobby/draft", new Dictionary<string, object> { ["token"] = _token, ["action"] = action, ["car"] = car ?? "" }); return null; }
+            var body = new Dictionary<string, object> { ["token"] = _token, ["action"] = action, ["car"] = car ?? "", ["target"] = target, ["request"] = request };
+            try { Post(_base + "/lobby/draft", body); return null; }
             catch (Exception e) { return e.Message; }
         }
 
