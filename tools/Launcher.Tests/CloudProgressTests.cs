@@ -32,7 +32,7 @@ namespace HmmRevive.Launcher.Tests
         public void ProgressNeverGoesBackwardsOnATypicalTimelineAndOnASlowOne()
         {
             // The step changes at these elapsed seconds: typical (measured) and a run where the download took twice as long.
-            foreach (var timeline in new[] { new[] { 0, 8, 33, 123, 148 }, new[] { 0, 12, 50, 250, 290 } })
+            foreach (var timeline in new[] { new[] { 0, 4, 14, 42, 54 }, new[] { 0, 6, 25, 100, 125 } })
             {
                 int last = -1;
                 for (int t = 0; t <= 300; t += 2)
@@ -48,21 +48,21 @@ namespace HmmRevive.Launcher.Tests
         [Fact]
         public void AStepThatFinishedEarlyJumpsToTheStartOfTheNextBand()
         {
-            // The download step reached at 20 s (faster than usual): the bar sits at the start of that step, not at the clock.
-            Assert.True(Percent("pull", 20) >= Percent("reserve", 33));
+            // The download step reached at 8 s (faster than usual): the bar sits at the start of that step, not at the clock.
+            Assert.True(Percent("pull", 8) >= Percent("reserve", 13));
         }
 
         [Fact]
         public void TheEstimateShrinksAsTimePassesWithinAStep()
         {
-            Assert.True(Eta("pull", 40) > Eta("pull", 100));
-            Assert.True(Eta("pull", 40) > Eta("connect", 150));
+            Assert.True(Eta("pull", 20) > Eta("pull", 35));
+            Assert.True(Eta("pull", 20) > Eta("connect", 60));
         }
 
         [Fact]
-        public void TheEstimateAtTheStartIsAboutTheTotalMeasuredTime()
+        public void TheEstimateAtTheStartIsTheMeasuredTimeToOpenALobby()
         {
-            Assert.InRange((int)Eta("contact", 0), 150, 165);
+            Assert.InRange((int)Eta("contact", 0), 60, 80); // 70 s measured in Brazil South with the game outside the image
         }
 
         [Fact]
@@ -71,14 +71,14 @@ namespace HmmRevive.Launcher.Tests
             var late = CloudProgress.Compute("pull", 300);
             Assert.Equal(true, late["slow"]);
             Assert.Null(late["etaSeconds"]);
-            Assert.Equal(false, CloudProgress.Compute("pull", 150)["slow"]);
+            Assert.Equal(false, CloudProgress.Compute("connect", 115)["slow"]); // a normal East US or Madrid lobby
         }
 
         [Fact]
         public void AStepThatRunsOverStillPromisesSomethingSensible()
         {
-            int? eta = Eta("pull", 200); // past the typical end of the step but not yet slow
-            Assert.InRange((int)eta, 40, 60); // ten seconds for the step plus the steps still to come
+            int? eta = Eta("pull", 100); // past the typical end of the step but not yet slow
+            Assert.InRange((int)eta, 30, 45); // ten seconds for the step plus the steps still to come
         }
 
         [Fact]
@@ -95,7 +95,7 @@ namespace HmmRevive.Launcher.Tests
         [Fact]
         public void ALongReservingIsShownAsTheDownloadBecauseAzureOnlyReportsItLater()
         {
-            Assert.Equal("reserve", CloudProgress.Compute("reserve", 20)["step"]);
+            Assert.Equal("reserve", CloudProgress.Compute("reserve", 10)["step"]);
             Assert.Equal("pull", CloudProgress.Compute("reserve", 60)["step"]);
             Assert.Equal("pull", CloudProgress.Compute("reserve", 200)["step"]); // a far region downloads for minutes
             Assert.Equal("start", CloudProgress.Compute("start", 60)["step"]);   // the other steps are not guessed

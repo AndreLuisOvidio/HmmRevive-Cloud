@@ -240,7 +240,7 @@ namespace HmmRevive.Launcher.Tests
             int polls = 0;
             var h = Make((m, u) => m == "POST"
                 ? Json(Obj("id", "a1b2c3", "hostname", "a1b2c3.hmm.ovidio.dev", "hostToken", "t"), 202)
-                : Json(Obj("id", "a1b2c3", "state", "creating", "step", polls++ < 3 ? "reserving" : "pulling", "elapsedSeconds", polls < 4 ? 20 : 140, "message", "Starting the cloud server...")));
+                : Json(Obj("id", "a1b2c3", "state", "creating", "step", polls++ < 3 ? "reserving" : "pulling", "elapsedSeconds", polls < 4 ? 10 : 140, "message", "Starting the cloud server...")));
             Assert.Null(h.Create("1.5", "public", null, null));
             var first = (Dictionary<string, object>)h.State()["progress"];
             Assert.Equal("reserve", first["step"]); // the create call was answered: the orchestrator has it
