@@ -287,6 +287,114 @@ namespace HmmRevive.Launcher.Tests
             Assert.Equal("The draft is over.", d.Mark("blue", 1, "9"));
         }
 
+        // ---- DRAFT-11: swap positions ----
+
+        [Fact]
+        public void ASwapRequestWaitsTenSecondsForTheTeammate()
+        {
+            var d = Four(plan: 15);
+            Assert.Null(d.AskSwap("blue", 2, 3, T0));
+            var r = Assert.Single(d.Requests);
+            Assert.Equal(("swap", "blue", 2, 3, T0.AddSeconds(10)), (r.Kind, r.Team, r.From, r.To, r.Expires));
+        }
+
+        [Fact]
+        public void AnAcceptedSwapExchangesThePositions()
+        {
+            var d = Four(plan: 15);
+            d.Mark("blue", 3, "7"); // b3 plans to pick 7
+            d.AskSwap("blue", 2, 3, T0);
+            Assert.Null(d.Answer("blue", 3, d.Requests[0].Id, true));
+            Assert.Equal("b3", Seat(d, "blue", 2).Member);
+            Assert.Equal("b2", Seat(d, "blue", 3).Member);
+            Assert.Equal("7", Seat(d, "blue", 2).Intent); // the plan goes with the player
+            Assert.Empty(d.Requests);
+        }
+
+        [Fact]
+        public void ADeclinedOrExpiredSwapIsDropped()
+        {
+            var d = Four(plan: 15);
+            d.AskSwap("blue", 2, 3, T0);
+            Assert.Null(d.Answer("blue", 3, d.Requests[0].Id, false));
+            Assert.Empty(d.Requests);
+            Assert.Equal("b2", Seat(d, "blue", 2).Member);
+
+            d.AskSwap("blue", 2, 3, T0);
+            d.Tick(T0.AddSeconds(9), new Random(1), NoneGone);
+            Assert.Single(d.Requests);
+            Assert.True(d.Tick(T0.AddSeconds(10), new Random(1), NoneGone));
+            Assert.Empty(d.Requests);
+        }
+
+        [Fact]
+        public void NoSwapForAPlayerWithACarOrActingNow()
+        {
+            var d = Four();
+            Assert.Equal("You can't swap positions now.", d.AskSwap("blue", 1, 2, T0)); // position 1 bans now
+            Play(d, "1"); Play(d, "2"); Play(d, "3"); // blue position 1 has a car
+            Assert.Equal("You can't swap positions now.", d.AskSwap("blue", 2, 1, T0));
+
+            var p = Four(plan: 5);
+            p.AskSwap("blue", 2, 1, T0);
+            p.Tick(T0.AddSeconds(5), new Random(1), NoneGone); // planning ends: position 1 is acting
+            Assert.Equal("You can't swap positions now.", p.Answer("blue", 1, p.Requests[0].Id, true));
+            Assert.Equal("b1", Seat(p, "blue", 1).Member);
+        }
+
+        [Fact]
+        public void ASwapNeedsAHumanTeammate()
+        {
+            var d = New(new[] { "b1", "b2", null }, new[] { "r1" }, plan: 15);
+            Assert.Equal("Pick a teammate.", d.AskSwap("blue", 2, 3, T0));
+            Assert.Equal("Pick a teammate.", d.AskSwap("blue", 2, 2, T0));
+            Assert.Equal("Pick a teammate.", d.AskSwap("blue", 2, 4, T0));
+        }
+
+        // ---- DRAFT-12: trade cars ----
+
+        private static SeatDraft TwoPicked(string[] blue)
+        {
+            var d = New(blue, new[] { "r1", "r2" });
+            Play(d, "1"); Play(d, "2"); Play(d, "3"); Play(d, "4", "5");
+            d.Tick(T0, new Random(1), NoneGone); // a bot in position 2 picks now
+            if (d.Current != null) Play(d, "6");
+            return d;
+        }
+
+        [Fact]
+        public void AnAcceptedTradeExchangesTheCars()
+        {
+            var d = TwoPicked(new[] { "b1", "b2" });
+            Assert.Equal("final", d.Stage);
+            Assert.Null(d.AskTrade("blue", 1, 2, T0));
+            var r = Assert.Single(d.Requests);
+            Assert.Equal(("trade", 1, 2, T0.AddSeconds(10)), (r.Kind, r.From, r.To, r.Expires));
+            Assert.Null(d.Answer("blue", 2, r.Id, true));
+            Assert.Equal("6", Seat(d, "blue", 1).Car);
+            Assert.Equal("3", Seat(d, "blue", 2).Car);
+        }
+
+        [Fact]
+        public void TradingWithABotNeedsNoConsent()
+        {
+            var d = TwoPicked(new[] { "b1", null });
+            string botCar = Seat(d, "blue", 2).Car;
+            Assert.Null(d.AskTrade("blue", 1, 2, T0));
+            Assert.Empty(d.Requests);
+            Assert.Equal(botCar, Seat(d, "blue", 1).Car);
+            Assert.Equal("3", Seat(d, "blue", 2).Car);
+        }
+
+        [Fact]
+        public void ATradeNeedsACarOnBothSides()
+        {
+            var d = Four();
+            Play(d, "1"); Play(d, "2"); Play(d, "3"); // only blue position 1 has a car
+            Assert.Equal("Both of you need a car first.", d.AskTrade("blue", 1, 2, T0));
+            Assert.Equal("Both of you need a car first.", d.AskTrade("blue", 2, 1, T0));
+        }
+
         [Fact]
         public void WithoutATimeLimitFinalizationHasNoEnd()
         {

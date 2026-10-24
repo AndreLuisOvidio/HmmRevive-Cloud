@@ -200,8 +200,8 @@ The lobby draft today works per team: a team's turn bans or picks several cars a
 | DRAFT-08 | P1: Draft by position (AC13 integrity) | Execute | Implementing |
 | DRAFT-09 | P1: What each side sees | Tasks | Pending |
 | DRAFT-10 | P1: Finalization and the match | Tasks | Pending |
-| DRAFT-11 | P2: Swap positions | Tasks | Pending |
-| DRAFT-12 | P2: Trade cars | Tasks | Pending |
+| DRAFT-11 | P2: Swap positions | Execute | Implementing |
+| DRAFT-12 | P2: Trade cars | Execute | Implementing |
 | DRAFT-13 | P1: Full-window draft screen | Tasks | Pending |
 | DRAFT-14 | P1: Host settings and version | Tasks | Pending |
 

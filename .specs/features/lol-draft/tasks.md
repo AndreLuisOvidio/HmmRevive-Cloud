@@ -97,8 +97,8 @@ T6 → T7 → T8
 
 **Done when**:
 
-- [ ] `DraftTests` cover every AC of both P2 stories
-- [ ] Gate check passes: `dotnet test tools/Launcher.Tests --filter FullyQualifiedName~DraftTests`
+- [x] `DraftTests` cover every AC of both P2 stories
+- [x] Gate check passes: `dotnet test tools/Launcher.Tests --filter FullyQualifiedName~DraftTests`
 
 **Tests**: unit
 **Gate**: quick

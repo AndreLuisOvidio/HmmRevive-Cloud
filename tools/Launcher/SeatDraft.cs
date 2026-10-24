@@ -22,6 +22,9 @@ namespace HmmRevive.Launcher
         /// player plans to pick, marked outside their turn (used as the mark when their pick turn starts).</summary>
         public class Seat { public string Member, Mark, Intent, Ban, Car; public bool Locked; }
         public class Turn { public string Team; public bool Pick; public List<int> Positions; }
+        /// <summary>A teammate's request to swap positions or trade cars, waiting for position To to answer.</summary>
+        public class Request { public int Id; public string Kind, Team; public int From, To; public DateTime Expires; }
+        public const int RequestSeconds = 10;
 
         // The order, for Team 1 (true) and Team 2: ban, ban, then picks 1-2-2-1-1-1.
         private static readonly (bool first, bool pick, int[] positions)[] Order =
@@ -34,6 +37,8 @@ namespace HmmRevive.Launcher
         public readonly string First, Second; // "blue"/"red": Team 1 and Team 2
         public readonly Dictionary<string, List<Seat>> Seats;
         public readonly List<Turn> Turns;
+        public readonly List<Request> Requests = new List<Request>();
+        private int _requestId;
         public int Step { get; private set; }
         public string Stage { get; private set; } // plan, turns, final, done
         public DateTime? StageEnds { get; private set; } // null: no time limit
@@ -112,7 +117,7 @@ namespace HmmRevive.Launcher
         /// </summary>
         public bool Tick(DateTime now, Random rng, Func<string, bool> gone)
         {
-            bool changed = false;
+            bool changed = Requests.RemoveAll(r => now >= r.Expires) > 0;
             if (Stage == "plan" && StageEnds != null && now >= StageEnds) { StartTurns(now); changed = true; }
             while (Stage == "turns")
             {
@@ -133,6 +138,64 @@ namespace HmmRevive.Launcher
             }
             if (Stage == "final" && StageEnds != null && now >= StageEnds) { Stage = "done"; changed = true; }
             return changed;
+        }
+
+        // ---- swaps and trades between teammates ----
+
+        // Positions change hands only before either player has a car, and never while one of them is choosing.
+        private bool CanSwap(string team, int a, int b) =>
+            (Stage == "plan" || Stage == "turns") && SeatAt(team, a).Car == null && SeatAt(team, b).Car == null && !Acting(team, a) && !Acting(team, b);
+
+        /// <summary>The player in position <paramref name="from"/> asks the one in <paramref name="to"/> to swap positions.</summary>
+        public string AskSwap(string team, int from, int to, DateTime now)
+        {
+            Seat a = SeatAt(team, from), b = SeatAt(team, to);
+            if (a == null) return "Only players draft.";
+            if (b == null || b == a || b.Member == null) return "Pick a teammate.";
+            if (!CanSwap(team, from, to)) return "You can't swap positions now.";
+            Ask("swap", team, from, to, now);
+            return null;
+        }
+
+        /// <summary>Asks a teammate to trade picked cars; with a bot of the team the trade happens at once.</summary>
+        public string AskTrade(string team, int from, int to, DateTime now)
+        {
+            Seat a = SeatAt(team, from), b = SeatAt(team, to);
+            if (a == null) return "Only players draft.";
+            if (b == null || b == a) return "Pick a teammate.";
+            if (a.Car == null || b.Car == null) return "Both of you need a car first.";
+            if (Stage == "done") return "The draft is over.";
+            if (b.Member == null) (a.Car, b.Car) = (b.Car, a.Car);
+            else Ask("trade", team, from, to, now);
+            return null;
+        }
+
+        private void Ask(string kind, string team, int from, int to, DateTime now)
+        {
+            Requests.RemoveAll(r => r.Team == team && r.From == from); // one request per player at a time
+            Requests.Add(new Request { Id = ++_requestId, Kind = kind, Team = team, From = from, To = to, Expires = now.AddSeconds(RequestSeconds) });
+        }
+
+        /// <summary>The player in position <paramref name="pos"/> accepts or declines a request made to them.</summary>
+        public string Answer(string team, int pos, int id, bool accept)
+        {
+            Request r = Requests.FirstOrDefault(x => x.Id == id && x.Team == team && x.To == pos);
+            if (r == null) return "That request is gone.";
+            Requests.Remove(r);
+            if (!accept) return null;
+            Seat a = SeatAt(team, r.From), b = SeatAt(team, r.To);
+            if (r.Kind == "trade")
+            {
+                if (a.Car == null || b.Car == null) return "Both of you need a car first.";
+                (a.Car, b.Car) = (b.Car, a.Car);
+                return null;
+            }
+            if (!CanSwap(team, r.From, r.To)) return "You can't swap positions now.";
+            (a.Member, b.Member) = (b.Member, a.Member);
+            (a.Intent, b.Intent) = (b.Intent, a.Intent);
+            // Other requests between these positions were meant for the players who just moved.
+            Requests.RemoveAll(x => x.Team == team && new[] { x.From, x.To }.Intersect(new[] { r.From, r.To }).Any());
+            return null;
         }
 
         private string Free(Random rng) => _cars.Where(Available).OrderBy(_ => rng.Next()).FirstOrDefault();
