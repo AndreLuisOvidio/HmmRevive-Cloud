@@ -66,7 +66,17 @@ namespace HmmRevive.Launcher
         // Seams so tests can run the lobby without a game copy; production keeps the real ones.
         internal Func<string, bool> BuildReady = Builds.Ready;
         internal Func<Game.ServerOptions, System.Diagnostics.Process> StartServerHook = Game.StartServer;
-        /// <summary>Raised (on another thread, after the answer is sent) when the host asks to close the lobby.</summary>
+        /// <summary>
+        /// A cloud lobby whose container is still downloading the game (GameDownload); null = the game is in place (every
+        /// local lobby). Matches wait for it; a failed download closes the lobby after <see cref="GameFailedCloseSeconds"/>.
+        /// </summary>
+        internal Func<GameDownload> ServerGame = () => null;
+        public int GameFailedCloseSeconds = 60;
+        private string _serverGameLine; // the download state members last saw
+        private DateTime? _gameFailedAt;
+        private bool _closeAsked;
+        /// <summary>Raised (on another thread, after the answer is sent) when the host asks to close the lobby, or when the
+        /// game download of a cloud lobby failed.</summary>
         public event Action CloseRequested;
         public string Phase = "lobby"; // lobby, starting, playing
         public string Message = "";
@@ -475,6 +485,8 @@ namespace HmmRevive.Launcher
         {
             if (Phase == "draft") return "The draft isn't over yet.";
             if (Phase != "lobby") return "A match is already running.";
+            string game = ServerGame()?.Blocker(); // before the game check below: a downloading server has no game yet
+            if (game != null) return game;
             if (!Players.Any()) return _members.Count == 0 ? "Nobody is in the lobby." : "No players yet: someone has to join a team.";
             foreach (string t in new[] { "blue", "red" })
                 if (Humans(t) + BotsOn(t) == 0) return $"The {(t == "blue" ? "Blue" : "Red")} team is empty: add a bot or a player.";
@@ -631,64 +643,95 @@ namespace HmmRevive.Launcher
             return cars.All(c => c == "default") ? "" : string.Join(",", cars);
         }
 
-        // Once a second: drop members whose launcher went quiet, run the auto-start countdown, follow the server.
+        // Twice a second: drop members whose launcher went quiet, run the auto-start countdown, follow the server and the
+        // game download of a cloud lobby.
         private void Tick()
         {
             while (!_closed)
             {
                 Thread.Sleep(500);
-                lock (_gate)
+                Step(DateTime.UtcNow);
+            }
+        }
+
+        /// <summary>One pass of the lobby's clock (the ticker calls it; tests call it with their own time).</summary>
+        internal void Step(DateTime now)
+        {
+            lock (_gate)
+            {
+                FollowGameDownload(now);
+                // Players in a match keep their seat for a reconnect; a watching spectator whose launcher is gone for a
+                // minute gives the seat to whoever wants it (that launcher closes its game when it sees it's out).
+                foreach (Member m in _members.Where(x => !x.IsHost && (now - x.Seen).TotalSeconds > (!x.InMatch ? 20 : x.Team == Spectator ? 60 : double.MaxValue)).ToList())
                 {
-                    DateTime now = DateTime.UtcNow;
-                    // Players in a match keep their seat for a reconnect; a watching spectator whose launcher is gone for a
-                    // minute gives the seat to whoever wants it (that launcher closes its game when it sees it's out).
-                    foreach (Member m in _members.Where(x => !x.IsHost && (now - x.Seen).TotalSeconds > (!x.InMatch ? 20 : x.Team == Spectator ? 60 : double.MaxValue)).ToList())
-                    {
-                        _members.Remove(m);
-                        SeatLeft(m);
-                        Message = $"{m.Name} lost connection to the lobby.";
-                        ChatAdd(m.Name, m.Team, "lost", true);
-                        Changed();
-                    }
-                    if (_seatsFreeing.RemoveAll(t => t <= now) > 0) Changed(); // a spectator seat is free again
-                    if (Phase == "draft" && _draft.TurnEnds != null)
-                    {
-                        int left = (int)Math.Ceiling((_draft.TurnEnds.Value - now).TotalSeconds);
-                        if (left != _draftSecondsShown) { _draftSecondsShown = left; Changed(); } // members' turn clocks tick
-                    }
-                    if (Phase == "draft" && _draft.TimedOut)
-                    {
-                        string team = _draft.Current.Team == "blue" ? "Blue" : "Red";
-                        _draft.Fill(_rng);
-                        Message = $"Time's up: the {team} team's turn was completed at random.";
-                        DraftAdvance();
-                        Changed();
-                    }
-                    if (Phase == "lobby")
-                    {
-                        bool allReady = Players.Any() && Players.All(x => x.Ready) && CantStart() == null;
-                        if (AutoStart && allReady && _countdownEnd == null) { _countdownEnd = now.AddSeconds(CountdownSeconds); Changed(); }
-                        else if ((!AutoStart || !allReady) && _countdownEnd != null) { _countdownEnd = null; Changed(); }
-                        if (_countdownEnd != null && now >= _countdownEnd) Go();
-                    }
-                    else if (Phase == "starting" && Game.ServerListening(GamePort))
-                    {
-                        Phase = "playing";
-                        _matchStarted = true;
-                        Message = "Match running. Your game is starting.";
-                        Changed();
-                    }
-                    else if ((Phase == "starting" || Phase == "playing") && !Game.Running(Game.Server))
-                    {
-                        Phase = "lobby";
-                        if (!Message.StartsWith("The host stopped"))
-                            Message = _matchStarted ? "Match over. Get ready for the next one!" : "The match server stopped before the match began.";
-                        foreach (Member m in _members) { m.InMatch = false; m.Ready = false; m.Seen = now; }
-                        _draft = null; // every match gets its own draft
-                        _seatsFreeing.Clear();
-                        Changed();
-                    }
+                    _members.Remove(m);
+                    SeatLeft(m);
+                    Message = $"{m.Name} lost connection to the lobby.";
+                    ChatAdd(m.Name, m.Team, "lost", true);
+                    Changed();
                 }
+                if (_seatsFreeing.RemoveAll(t => t <= now) > 0) Changed(); // a spectator seat is free again
+                if (Phase == "draft" && _draft.TurnEnds != null)
+                {
+                    int left = (int)Math.Ceiling((_draft.TurnEnds.Value - now).TotalSeconds);
+                    if (left != _draftSecondsShown) { _draftSecondsShown = left; Changed(); } // members' turn clocks tick
+                }
+                if (Phase == "draft" && _draft.TimedOut)
+                {
+                    string team = _draft.Current.Team == "blue" ? "Blue" : "Red";
+                    _draft.Fill(_rng);
+                    Message = $"Time's up: the {team} team's turn was completed at random.";
+                    DraftAdvance();
+                    Changed();
+                }
+                if (Phase == "lobby")
+                {
+                    bool allReady = Players.Any() && Players.All(x => x.Ready) && CantStart() == null;
+                    if (AutoStart && allReady && _countdownEnd == null) { _countdownEnd = now.AddSeconds(CountdownSeconds); Changed(); }
+                    else if ((!AutoStart || !allReady) && _countdownEnd != null) { _countdownEnd = null; Changed(); }
+                    if (_countdownEnd != null && now >= _countdownEnd) Go();
+                }
+                else if (Phase == "starting" && Game.ServerListening(GamePort))
+                {
+                    Phase = "playing";
+                    _matchStarted = true;
+                    Message = "Match running. Your game is starting.";
+                    Changed();
+                }
+                else if ((Phase == "starting" || Phase == "playing") && !Game.Running(Game.Server))
+                {
+                    Phase = "lobby";
+                    if (!Message.StartsWith("The host stopped"))
+                        Message = _matchStarted ? "Match over. Get ready for the next one!" : "The match server stopped before the match began.";
+                    foreach (Member m in _members) { m.InMatch = false; m.Ready = false; m.Seen = now; }
+                    _draft = null; // every match gets its own draft
+                    _seatsFreeing.Clear();
+                    Changed();
+                }
+            }
+        }
+
+        // A cloud lobby's game download: members see every change; a failure is announced and closes the lobby a minute later.
+        private void FollowGameDownload(DateTime now)
+        {
+            GameDownload g = ServerGame();
+            string line = g?.Line;
+            if (line != _serverGameLine)
+            {
+                _serverGameLine = line;
+                if (g != null && g.Failed && _gameFailedAt == null)
+                {
+                    _gameFailedAt = now;
+                    _countdownEnd = null;
+                    Message = $"The server couldn't get the game ({g.Reason}). This lobby closes in {GameFailedCloseSeconds} seconds: create a new one.";
+                    Program.Log("game download failed: " + g.Reason);
+                }
+                Changed();
+            }
+            if (_gameFailedAt != null && !_closeAsked && (now - _gameFailedAt.Value).TotalSeconds >= GameFailedCloseSeconds)
+            {
+                _closeAsked = true;
+                ThreadPool.QueueUserWorkItem(_ => CloseRequested?.Invoke());
             }
         }
 
@@ -749,6 +792,7 @@ namespace HmmRevive.Launcher
                     ["nextIsDraft"] = NeedsDraft,
                     ["countdown"] = _countdownEnd == null ? -1 : Math.Max(0, (int)Math.Ceiling((_countdownEnd.Value - DateTime.UtcNow).TotalSeconds)),
                     ["cantStart"] = CantStart(),
+                    ["serverGame"] = ServerGame()?.Json(),
                     ["gamePort"] = GamePort,
                     ["match"] = _matchNumber,
                     ["teams"] = teams,
