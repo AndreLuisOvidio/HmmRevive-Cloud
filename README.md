@@ -53,6 +53,9 @@ few minutes after the last player leaves, or after 3 hours at most.
 - **Joining** needs no key. Cloud lobbies appear in **Play** with a cloud badge (and a lock when they ask for a password), or
   type the lobby's six-character code (for example `a1b2c3`) or its `https://` address in the join box.
 - **Rejoining:** if you close the launcher while your cloud lobby is open, the Host screen offers to take your seat back.
+- **Region:** Brazil, United States or Europe (Madrid); pick the one nearest to most players. A lobby opens in about 70 seconds
+  in Brazil and about two minutes elsewhere; for its first seconds the server is still getting the game ready, which the
+  lobby shows to everyone, and the match starts once it is ready.
 - Everyone needs the same HMM Revive version. Cloud lobbies play the Steam build.
 
 **Security:** the match server and the lobby have no real authentication. Anyone who can reach their ports (UDP 9696

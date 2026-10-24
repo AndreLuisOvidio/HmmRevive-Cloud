@@ -38,7 +38,9 @@ Na sala
 SALA NA NUVEM (sem VPN, sem PC que precise ficar ligado)
   - Em Hospedar, escolha "Na nuvem". Precisa de uma chave de convite de quem cuida da nuvem: cole uma vez onde a tela pedir
     (fica salva no seu PC). Escolha quem pode encontrar a sala (Qualquer pessoa = aparece em Jogar, Só quem tiver o código) e uma
-    senha opcional, depois "Criar sala na nuvem". Fica pronta em cerca de um minuto.
+    senha opcional, e a região (Brasil, EUA ou Europa: a mais perto da maioria dos jogadores), depois "Criar sala na nuvem".
+    Abre em cerca de um minuto (dois fora do Brasil). Nos primeiros segundos o servidor ainda está preparando o jogo: a sala
+    mostra isso, e a partida começa quando ele fica pronto.
   - Os jogadores acham a sala em Jogar (selo de nuvem, cadeado = senha) ou digitam o código (como a1b2c3) na caixa de entrar.
     Entrar não precisa de chave.
   - O servidor é apagado alguns minutos depois que o último jogador sai, ou depois de 3 horas. Se você fechar o launcher nesse

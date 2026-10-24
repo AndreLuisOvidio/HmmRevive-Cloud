@@ -43,9 +43,14 @@ preview, the launcher offers this update by itself.
 - **Ping:** the Play list shows the network delay to each lobby's server (green under 60 ms, yellow under 120 ms, red above),
   and inside a lobby the launcher keeps measuring it, with average, best, worst and lost readings. It times the connection
   to the lobby's port on the server's address (the game's own ping can be a few milliseconds higher). Works for local and cloud lobbies.
+- **Regions:** the host picks where the cloud server runs: Brazil (the default), United States or Europe (Madrid). Pick the one
+  nearest to most players; the Play list and the lobby show each cloud lobby's region.
 - **Cloud progress:** creating a cloud lobby shows a progress bar, the five steps (contacting the cloud, reserving a server,
   downloading the game, starting the server, connecting), what each one is and how long is left. A banner follows you to
-  the other tabs. It usually takes about 2½ minutes, and much less when another lobby ran a moment before.
+  the other tabs. The lobby opens in about 70 seconds in Brazil and about two minutes in the United States or Madrid.
+- **Server preparing the game:** a cloud lobby opens while its server is still getting the game ready (a few seconds to half a
+  minute). Everyone in the lobby sees a notice with the progress, can already pick team and car and get ready, and the match
+  starts as soon as the game is ready. If the server cannot get the game, the lobby says so and closes a minute later.
 - Local lobbies work as before. The Steam build only: the cloud server runs the same game server as the local one.
 
 ## 1.5 (2026-10-13)

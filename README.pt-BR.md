@@ -54,6 +54,9 @@ apagado alguns minutos depois que o último jogador sai, ou depois de 3 horas no
 - **Para entrar** não precisa de chave. As salas na nuvem aparecem em **Jogar** com o selo de nuvem (e um cadeado quando pedem
   senha), ou digite o código de seis caracteres da sala (por exemplo `a1b2c3`) ou o endereço `https://` dela na caixa de entrar.
 - **Voltar:** se você fechar o launcher com a sua sala na nuvem aberta, a tela Hospedar oferece voltar para o seu lugar.
+- **Região:** Brasil, EUA ou Europa (Madri); escolha a mais perto da maioria dos jogadores. A sala abre em cerca de 70 segundos
+  no Brasil e uns dois minutos nas outras; nos primeiros segundos o servidor ainda está preparando o jogo, a sala mostra isso
+  para todos, e a partida começa quando ele fica pronto.
 - Todos precisam da mesma versão do HMM Revive. As salas na nuvem usam a versão da Steam.
 
 **Segurança:** o servidor de partida e a sala não têm autenticação de verdade. Qualquer pessoa que alcance as portas
