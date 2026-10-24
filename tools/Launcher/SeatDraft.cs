@@ -198,6 +198,51 @@ namespace HmmRevive.Launcher
             return null;
         }
 
+        // ---- what members see ----
+
+        /// <summary>
+        /// The draft as a member of <paramref name="viewerTeam"/> sees it: every locked ban and pick, but marks, plans and
+        /// requests only for their own team.
+        /// </summary>
+        public Dictionary<string, object> Json(string viewerTeam, DateTime now)
+        {
+            // Locked choices in the order they were made: the turns so far, position by position.
+            var bans = new List<object>();
+            var picks = new List<object>();
+            foreach (Turn t in Turns.Take(Stage == "turns" ? Step + 1 : Stage == "plan" ? 0 : Turns.Count))
+                foreach (Seat s in t.Positions.Select(p => SeatAt(t.Team, p)))
+                {
+                    string car = t.Pick ? s.Car : s.Ban;
+                    if (car != null && (t != Current || s.Locked))
+                        (t.Pick ? picks : bans).Add(new Dictionary<string, object> { ["car"] = car, ["team"] = t.Team });
+                }
+            int Left(DateTime? end) => end == null ? -1 : Math.Max(0, (int)Math.Ceiling((end.Value - now).TotalSeconds));
+            return new Dictionary<string, object>
+            {
+                ["first"] = First,
+                ["stage"] = Stage,
+                ["step"] = Step,
+                ["done"] = Stage == "final" || Stage == "done",
+                ["secondsLeft"] = Left(StageEnds),
+                ["turns"] = Turns.Select(t => new Dictionary<string, object> { ["team"] = t.Team, ["pick"] = t.Pick, ["positions"] = t.Positions.ToArray() }).ToArray(),
+                ["seats"] = Seats.ToDictionary(kv => kv.Key, kv => (object)kv.Value.Select((s, i) => new Dictionary<string, object>
+                {
+                    ["pos"] = i + 1,
+                    ["id"] = s.Member ?? "",
+                    ["bot"] = s.Member == null,
+                    ["ban"] = s.Ban ?? "",
+                    ["car"] = s.Car ?? "",
+                    ["acting"] = Acting(kv.Key, i + 1) && !s.Locked,
+                    ["mark"] = kv.Key == viewerTeam ? s.Mark ?? "" : "",
+                    ["intent"] = kv.Key == viewerTeam ? s.Intent ?? "" : "",
+                }).ToArray()),
+                ["bans"] = bans.ToArray(),
+                ["picks"] = picks.ToArray(),
+                ["requests"] = Requests.Where(r => r.Team == viewerTeam).Select(r => new Dictionary<string, object>
+                    { ["id"] = r.Id, ["kind"] = r.Kind, ["from"] = r.From, ["to"] = r.To, ["secondsLeft"] = Left(r.Expires) }).ToArray(),
+            };
+        }
+
         private string Free(Random rng) => _cars.Where(Available).OrderBy(_ => rng.Next()).FirstOrDefault();
 
         private bool AllLocked() => Current.Positions.All(p => SeatAt(Current.Team, p).Locked);

@@ -395,6 +395,60 @@ namespace HmmRevive.Launcher.Tests
             Assert.Equal("Both of you need a car first.", d.AskTrade("blue", 2, 1, T0));
         }
 
+        // ---- DRAFT-09: what each side sees ----
+
+        private static Dictionary<string, object> SeatJson(Dictionary<string, object> j, string team, int pos) =>
+            (Dictionary<string, object>)((object[])((Dictionary<string, object>)j["seats"])[team])[pos - 1];
+
+        private static List<(string car, string team)> Choices(Dictionary<string, object> j, string key) =>
+            ((object[])j[key]).Cast<Dictionary<string, object>>().Select(c => ((string)c["car"], (string)c["team"])).ToList();
+
+        [Fact]
+        public void MarksShowOnlyToTheMarkingTeam()
+        {
+            var d = Four(plan: 15);
+            d.Mark("blue", 3, "7"); // a plan
+            d.Tick(T0.AddSeconds(15), new Random(1), NoneGone);
+            d.Mark("blue", 1, "5"); // a ban mark
+            Assert.Equal("5", SeatJson(d.Json("blue", T0), "blue", 1)["mark"]);
+            Assert.Equal("7", SeatJson(d.Json("blue", T0), "blue", 3)["intent"]);
+            foreach (string viewer in new[] { "red", "spec", null })
+            {
+                Assert.Equal("", SeatJson(d.Json(viewer, T0), "blue", 1)["mark"]);
+                Assert.Equal("", SeatJson(d.Json(viewer, T0), "blue", 3)["intent"]);
+            }
+        }
+
+        [Fact]
+        public void EveryoneSeesLockedChoicesTheOrderAndTheClock()
+        {
+            var d = Four();
+            Play(d, "5"); Play(d, "6"); Play(d, "7");
+            foreach (string viewer in new[] { "blue", "red", "spec" })
+            {
+                var j = d.Json(viewer, T0.AddSeconds(10));
+                Assert.Equal(new[] { ("5", "blue"), ("6", "red") }, Choices(j, "bans"));
+                Assert.Equal(new[] { ("7", "blue") }, Choices(j, "picks"));
+                Assert.Equal("5", SeatJson(j, "blue", 1)["ban"]);
+                Assert.Equal("7", SeatJson(j, "blue", 1)["car"]);
+                Assert.Equal(("blue", "turns", 3, 8, 20), ((string)j["first"], (string)j["stage"], (int)j["step"], ((object[])j["turns"]).Length, (int)j["secondsLeft"]));
+                var turn = (Dictionary<string, object>)((object[])j["turns"])[3];
+                Assert.Equal(("red", true), ((string)turn["team"], (bool)turn["pick"]));
+                Assert.Equal(new[] { 1, 2 }, (int[])turn["positions"]);
+            }
+        }
+
+        [Fact]
+        public void RequestsShowOnlyToTheirTeam()
+        {
+            var d = Four(plan: 15);
+            d.AskSwap("blue", 2, 3, T0);
+            var r = (Dictionary<string, object>)Assert.Single((object[])d.Json("blue", T0.AddSeconds(3))["requests"]);
+            Assert.Equal(("swap", 2, 3, 7), ((string)r["kind"], (int)r["from"], (int)r["to"], (int)r["secondsLeft"]));
+            Assert.Empty((object[])d.Json("red", T0)["requests"]);
+            Assert.Empty((object[])d.Json("spec", T0)["requests"]);
+        }
+
         [Fact]
         public void WithoutATimeLimitFinalizationHasNoEnd()
         {

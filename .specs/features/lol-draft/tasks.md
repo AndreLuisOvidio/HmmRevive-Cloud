@@ -120,8 +120,8 @@ T6 → T7 → T8
 
 **Done when**:
 
-- [ ] `DraftTests` show marks to the own team only and locked choices to everyone
-- [ ] Gate check passes: `dotnet build tools/Launcher -c Release && dotnet test tools/Launcher.Tests`
+- [x] `DraftTests` show marks to the own team only and locked choices to everyone
+- [x] Gate check passes: `dotnet build tools/Launcher -c Release && dotnet test tools/Launcher.Tests`
 
 **Tests**: unit
 **Gate**: build
