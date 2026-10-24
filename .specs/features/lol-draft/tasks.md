@@ -143,8 +143,8 @@ T6 → T7 → T8
 
 **Done when**:
 
-- [ ] `LobbyDraftTests` drive a full draft through `Lobby.Handle` and `Step`, including errors, finalization to match and bot cars
-- [ ] Gate check passes: `dotnet test tools/Launcher.Tests`
+- [x] `LobbyDraftTests` drive a full draft through `Lobby.Handle` and `Step`, including errors, finalization to match and bot cars
+- [x] Gate check passes: `dotnet test tools/Launcher.Tests`
 
 **Tests**: integration
 **Gate**: full

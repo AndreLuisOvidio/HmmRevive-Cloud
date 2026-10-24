@@ -190,7 +190,7 @@ The lobby draft today works per team: a team's turn bans or picks several cars a
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| DRAFT-01 | P1: Draft by position (AC1 draw) | Tasks | Pending |
+| DRAFT-01 | P1: Draft by position (AC1 draw) | Execute | Implementing |
 | DRAFT-02 | P1: Draft by position (AC2 order) | Execute | Implementing |
 | DRAFT-03 | P1: Draft by position (AC3 missing positions) | Execute | Implementing |
 | DRAFT-04 | P1: Draft by position (AC4 planning) | Execute | Implementing |
@@ -199,7 +199,7 @@ The lobby draft today works per team: a team's turn bans or picks several cars a
 | DRAFT-07 | P1: Draft by position (AC11-12 bots and leavers) | Execute | Implementing |
 | DRAFT-08 | P1: Draft by position (AC13 integrity) | Execute | Implementing |
 | DRAFT-09 | P1: What each side sees | Execute | Implementing |
-| DRAFT-10 | P1: Finalization and the match | Tasks | Pending |
+| DRAFT-10 | P1: Finalization and the match | Execute | Implementing |
 | DRAFT-11 | P2: Swap positions | Execute | Implementing |
 | DRAFT-12 | P2: Trade cars | Execute | Implementing |
 | DRAFT-13 | P1: Full-window draft screen | Tasks | Pending |

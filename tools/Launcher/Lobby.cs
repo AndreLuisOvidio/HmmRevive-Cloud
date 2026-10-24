@@ -85,10 +85,10 @@ namespace HmmRevive.Launcher
         public Dictionary<string, object> CarStats = Game.CleanCarStats(null); // HP/move/damage/recharge % per car id or "default" (Steam build only)
         public bool AutoStart = true;
         public bool Spectators, DraftOn;
-        public string DraftBans = Draft.DefaultBans, DraftPicks = Draft.DefaultPicks;
-        public int DraftTime = Draft.DefaultTurnSeconds; // seconds per draft turn, 0 = no limit
+        public int DraftTime = SeatDraft.DefaultTurnSeconds; // seconds per draft turn, 0 = no limit
+        internal int DraftPlanSeconds = SeatDraft.PlanSeconds, DraftFinalSeconds = SeatDraft.FinalSeconds; // tests shorten them
         public string Cooldown = ""; // seconds for every car's abilities ("0.1"), "" = the game's own (Steam build only)
-        private Draft _draft; // this match's draft: running (phase "draft") or done (cars limited to each team's picks)
+        private SeatDraft _draft; // this match's draft: running (phase "draft") or done (each player drives their position's pick)
         private readonly Random _rng = new Random();
         public readonly Dictionary<string, TeamSetup> Teams = new Dictionary<string, TeamSetup> { ["blue"] = new TeamSetup(), ["red"] = new TeamSetup() };
         private DateTime? _countdownEnd;
@@ -152,9 +152,7 @@ namespace HmmRevive.Launcher
             AutoStart = h.Bool("autoStart", AutoStart);
             Spectators = h.Bool("spectators", Spectators);
             DraftOn = h.Bool("draft", DraftOn);
-            // (1.3 preview had one "draftOrder" for bans and picks; its default was wrong, so it isn't read.)
-            DraftBans = Draft.Clean(h.Str("draftBans")) ?? DraftBans;
-            DraftPicks = Draft.Clean(h.Str("draftPicks")) ?? DraftPicks;
+            // (Up to 1.7 the host wrote the ban and pick orders, "draftBans"/"draftPicks"; the order is fixed now, so they aren't read.)
             DraftTime = Math.Max(0, Math.Min(600, h.Int("draftTime", DraftTime)));
             Cooldown = CleanCooldown(h.Str("cooldown") ?? Cooldown);
             CarStats = Game.CleanCarStats(h.Obj("carStats"));
@@ -187,7 +185,7 @@ namespace HmmRevive.Launcher
         public Dictionary<string, object> SetupJson()
         {
             var d = new Dictionary<string, object> { ["arena"] = Arena, ["score"] = Score, ["ballSpeed"] = BallSpeed, ["autoStart"] = AutoStart, ["spectators"] = Spectators, ["draft"] = DraftOn,
-                ["draftBans"] = DraftBans, ["draftPicks"] = DraftPicks, ["draftTime"] = DraftTime, ["cooldown"] = Cooldown, ["carStats"] = CarStats };
+                ["draftTime"] = DraftTime, ["cooldown"] = Cooldown, ["carStats"] = CarStats };
             foreach (var t in Teams)
                 d[t.Key] = new Dictionary<string, object> { ["bots"] = t.Value.Bots, ["difficulty"] = t.Value.Difficulty, ["cars"] = t.Value.Cars.ToArray() };
             return d;
@@ -213,7 +211,7 @@ namespace HmmRevive.Launcher
         }
 
         // What a running or finished draft depends on: changing it means a new draft.
-        private string DraftShape() => $"{DraftEnabled} {DraftBans} {DraftPicks} {BotsOn("blue")} {BotsOn("red")}";
+        private string DraftShape() => $"{DraftEnabled} {BotsOn("blue")} {BotsOn("red")}";
 
         // ---- members ----
 
@@ -356,17 +354,11 @@ namespace HmmRevive.Launcher
                 {
                     string c = CleanCar(d.Str("car"));
                     c = c != "default" && c != "random" ? c : "";
-                    if (!Drafting) m.Car = c;
-                    else if (_draft.Done && Phase == "lobby" && (m.Team == "blue" || m.Team == "red") && c != m.Car && _draft.Pool(m.Team).Contains(c))
-                    {
-                        // Drafted: any of the team's cars; a teammate who drives it gets ours.
-                        Member mate = Players.FirstOrDefault(x => x != m && x.Team == m.Team && x.Car == c);
-                        if (mate != null) { mate.Car = m.Car; mate.Ready = false; }
-                        m.Car = c;
-                    }
+                    if (!Drafting) m.Car = c; // drafted cars change hands only by a trade in the draft
                 }
                 if (d.ContainsKey("skin")) m.Skin = System.Text.RegularExpressions.Regex.Replace(d.Str("skin") ?? "0", @"[^A-Za-z0-9 ()'\-]", "");
                 if (d.ContainsKey("ready")) m.Ready = d.Bool("ready");
+                if (Phase == "draft") DraftFollow(DateTime.UtcNow); // everyone ready in finalization: the match starts
                 Changed();
                 return null;
             }
@@ -514,41 +506,45 @@ namespace HmmRevive.Launcher
         private void BeginDraft()
         {
             _countdownEnd = null;
-            var slots = new Dictionary<string, int> { ["blue"] = Humans("blue") + BotsOn("blue"), ["red"] = Humans("red") + BotsOn("red") };
+            DateTime now = DateTime.UtcNow;
             string first = _rng.Next(2) == 0 ? "blue" : "red";
-            _draft = new Draft(DraftBans, DraftPicks, first, slots, Catalog.Cars.Select(c => c.Id.ToString()), DraftTime);
+            // Positions: the team's players in random order, then its bots (null).
+            var seats = new[] { "blue", "red" }.ToDictionary(t => t, t => Players.Where(m => m.Team == t).OrderBy(_ => _rng.Next())
+                .Select(m => m.Id).Concat(Enumerable.Repeat((string)null, BotsOn(t))).ToList());
+            _draft = new SeatDraft(first, seats, Catalog.Cars.Select(c => c.Id.ToString()), DraftTime, now, DraftPlanSeconds, DraftFinalSeconds);
             Phase = "draft";
             foreach (Member m in Players) m.Ready = false;
             Message = $"Draft started: the {(first == "blue" ? "Blue" : "Red")} team goes first.";
-            DraftAdvance();
+            DraftFollow(now);
             Changed();
         }
 
-        // Teams without players draft at random; after the last pick every player gets one of the team's cars.
-        private void DraftAdvance()
+        private bool Gone(string id) => !Players.Any(m => m.Id == id);
+
+        // The draft's clock and results: bots and players who left play by themselves, players drive their positions'
+        // picks, and the match starts once finalization ends or every player is ready. True when something changed.
+        private bool DraftFollow(DateTime now)
         {
-            while (!_draft.Done && Humans(_draft.Current.Team) == 0) _draft.Auto(_rng);
-            if (!_draft.Done || Phase != "draft") return;
-            Phase = "lobby";
-            foreach (string team in new[] { "blue", "red" })
+            bool changed = _draft.Tick(now, _rng, Gone);
+            foreach (SeatDraft.Seat s in _draft.Seats.Values.SelectMany(x => x).Where(x => x.Car != null))
             {
-                List<string> pool = _draft.Pool(team);
-                var taken = new HashSet<string>();
-                var humans = Players.Where(x => x.Team == team).ToList();
-                foreach (Member m in humans) // keep a car a player already had, when the team picked it
-                    if (pool.Contains(m.Car) && taken.Add(m.Car)) continue;
-                    else m.Car = "";
-                foreach (Member m in humans.Where(x => x.Car == ""))
-                {
-                    m.Car = pool.FirstOrDefault(c => !taken.Contains(c)) ?? "";
-                    taken.Add(m.Car);
-                }
+                Member m = Players.FirstOrDefault(x => x.Id == s.Member);
+                if (m != null && m.Car != s.Car) { m.Car = s.Car; changed = true; }
             }
-            foreach (Member m in Players) m.Ready = false;
-            Message = "Draft done. Choose which of your team's cars you drive, then get ready.";
+            if (_draft.Stage == "done" || (_draft.Stage == "final" && Players.Any() && Players.All(m => m.Ready)))
+            {
+                Phase = "lobby";
+                string why = CantStart();
+                if (why == null) BeginMatch();
+                else Message = why;
+                changed = true;
+            }
+            return changed;
         }
 
-        public string DraftAct(string token, string action, string car)
+        /// <summary>A player's draft action: mark or lock a car, ask a teammate (by position) to swap positions or trade
+        /// cars, or answer a teammate's request.</summary>
+        public string DraftAct(string token, string action, string car, int target = 0, int request = 0)
         {
             lock (_gate)
             {
@@ -556,14 +552,22 @@ namespace HmmRevive.Launcher
                 if (m == null) return "You're not in this lobby anymore.";
                 m.Seen = DateTime.UtcNow;
                 if (_draft == null || Phase != "draft") return "No draft is running.";
-                if (m.Team != "blue" && m.Team != "red") return "Only players draft.";
-                string error = action == "lock" ? _draft.Lock(m.Team) : _draft.Select(m.Team, CleanCar(car));
-                if (error != null) return error;
-                if (action == "lock")
+                int pos = _draft.Seats.TryGetValue(m.Team ?? "", out var seats) ? seats.FindIndex(s => s.Member == m.Id) + 1 : 0;
+                if (pos == 0) return "Only players draft.";
+                DateTime now = DateTime.UtcNow;
+                string error;
+                switch (action)
                 {
-                    Message = $"{m.Name} locked in.";
-                    DraftAdvance();
+                    case "mark": error = _draft.Mark(m.Team, pos, Catalog.CarId(car ?? "")?.ToString()); break;
+                    case "lock": error = _draft.Lock(m.Team, pos, now); break;
+                    case "swap": error = _draft.AskSwap(m.Team, pos, target, now); break;
+                    case "trade": error = _draft.AskTrade(m.Team, pos, target, now); break;
+                    case "accept": case "decline": error = _draft.Answer(m.Team, pos, request, action == "accept"); break;
+                    default: return "Unknown draft action.";
                 }
+                if (error != null) return error;
+                if (action == "lock") Message = $"{m.Name} locked in.";
+                DraftFollow(now);
                 Changed();
                 return null;
             }
@@ -633,7 +637,8 @@ namespace HmmRevive.Launcher
         {
             if (_draft != null)
             {
-                List<string> left = _draft.Pool(team).Where(c => !Players.Any(m => m.Team == team && m.Car == c)).ToList();
+                // Bots drive the cars picked for the bot positions (and for players who left), in position order.
+                List<string> left = _draft.Seats[team].Where(s => s.Member == null || Gone(s.Member)).Select(s => s.Car ?? "random").ToList();
                 var drafted = Enumerable.Range(0, BotsOn(team)).Select(i => i < left.Count ? left[i] : "random").ToList();
                 return drafted.Count == 0 ? "" : string.Join(",", drafted);
             }
@@ -671,18 +676,11 @@ namespace HmmRevive.Launcher
                     Changed();
                 }
                 if (_seatsFreeing.RemoveAll(t => t <= now) > 0) Changed(); // a spectator seat is free again
-                if (Phase == "draft" && _draft.TurnEnds != null)
+                if (Phase == "draft")
                 {
-                    int left = (int)Math.Ceiling((_draft.TurnEnds.Value - now).TotalSeconds);
-                    if (left != _draftSecondsShown) { _draftSecondsShown = left; Changed(); } // members' turn clocks tick
-                }
-                if (Phase == "draft" && _draft.TimedOut)
-                {
-                    string team = _draft.Current.Team == "blue" ? "Blue" : "Red";
-                    _draft.Fill(_rng);
-                    Message = $"Time's up: the {team} team's turn was completed at random.";
-                    DraftAdvance();
-                    Changed();
+                    bool changed = DraftFollow(now);
+                    int left = _draft.StageEnds == null ? -1 : (int)Math.Ceiling((_draft.StageEnds.Value - now).TotalSeconds);
+                    if (changed || left != _draftSecondsShown) { _draftSecondsShown = left; Changed(); } // members' clocks tick
                 }
                 if (Phase == "lobby")
                 {
@@ -784,11 +782,9 @@ namespace HmmRevive.Launcher
                     ["spectators"] = SpectatorsOn,
                     ["spectatorSeatsFreeing"] = Freeing,
                     ["draftOn"] = DraftEnabled,
-                    ["draftBans"] = DraftBans,
-                    ["draftPicks"] = DraftPicks,
                     ["draftTime"] = DraftTime,
                     ["cooldown"] = Builds.IsLegacy(Build) ? "" : Cooldown,
-                    ["draft"] = _draft?.Json(me?.Team),
+                    ["draft"] = _draft?.Json(me?.Team, DateTime.UtcNow),
                     ["nextIsDraft"] = NeedsDraft,
                     ["countdown"] = _countdownEnd == null ? -1 : Math.Max(0, (int)Math.Ceiling((_countdownEnd.Value - DateTime.UtcNow).TotalSeconds)),
                     ["cantStart"] = CantStart(),
@@ -876,7 +872,7 @@ namespace HmmRevive.Launcher
                 {
                     if (r.Method != "POST") return null;
                     var d = Js.Read(r.Body);
-                    string error = DraftAct(d.Str("token"), d.Str("action"), d.Str("car"));
+                    string error = DraftAct(d.Str("token"), d.Str("action"), d.Str("car"), d.Int("target"), d.Int("request"));
                     return error == null ? Response.Json(new Dictionary<string, object> { ["ok"] = true }) : Response.Error(error);
                 }
                 case "/lobby/chat":
