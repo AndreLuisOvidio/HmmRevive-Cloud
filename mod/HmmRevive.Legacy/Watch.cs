@@ -21,16 +21,30 @@ namespace HmmRevive.Legacy
         // (under Wine the server ran slow: the car answered late). Updates are counted in Update, steps in FixedUpdate.
         private int _frames, _steps;
         private float _maxDt, _prevReal, _moved;
+        private bool _clockLogged;
         private readonly System.Collections.Generic.Dictionary<int, Vector3> _carPos = new System.Collections.Generic.Dictionary<int, Vector3>();
         private float _lastReal, _lastGame;
 
         private void FixedUpdate() { _steps++; }
+
+        // The smallest step DateTime.UtcNow takes: the game's clock (Pocketverse SystemClock) is made of it.
+        private static string ClockStep()
+        {
+            long best = long.MaxValue, last = DateTime.UtcNow.Ticks;
+            for (int i = 0; i < 2000000 && best > 10000; i++)
+            {
+                long now = DateTime.UtcNow.Ticks;
+                if (now != last) { if (now - last < best) best = now - last; last = now; }
+            }
+            return (best / 10000.0).ToString("0.000") + " ms";
+        }
 
         private void Update()
         {
             HMMHub hub = GameHubBehaviour<HMMHub>.Hub;
             if (hub == null) return;
             _frames++;
+            if (!_clockLogged && Entry.ServerMode) { _clockLogged = true; Log.Info("clock: DateTime.UtcNow steps of " + ClockStep()); }
             float nowReal = Time.realtimeSinceStartup, gap = _prevReal > 0f ? nowReal - _prevReal : 0f;
             _prevReal = nowReal;
             if (gap > _maxDt) _maxDt = gap;
