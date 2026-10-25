@@ -238,6 +238,22 @@ static class Legacy
         Prologue(Target("Pocketverse.GameState", "EnableState"), il => new[] { il.Create(OpCodes.Ldarg_0), il.Create(OpCodes.Call, Hook("StateEnabled")) });
         Prologue(Target("HeavyMetalMachines.HMMHub", "Quit"), il => new[] { il.Create(OpCodes.Call, Hook("LogQuit")) });
 
+        // The game's clock is local time: Pocketverse.Clock.SystemClock and DateTimeUtil read DateTime.Now, and the server and
+        // each client compare those timestamps (match start, countdowns, inputs). Two machines in different time zones (a
+        // server in UTC and a player at UTC-3, or friends in Brazil and Portugal) end up hours apart: the match clock shows
+        // -59:-11, the cars wait at the start and abilities fire on their own. Read UtcNow there, on server and client alike.
+        int utc = 0;
+        foreach (var (clockType, clockMethods) in new[] { ("Pocketverse.Clock.SystemClock", "get_TimeMillis"), ("Pocketverse.DateTimeUtil", "CurrentTimeInMillis") })
+            foreach (var m in module.GetType(clockType).Methods.Where(m => m.Name == clockMethods && m.HasBody))
+                foreach (var ins in m.Body.Instructions.Where(i => i.Operand is MethodReference mr && mr.Name == "get_Now" && mr.DeclaringType.FullName == "System.DateTime"))
+                {
+                    var now = (MethodReference)ins.Operand;
+                    ins.Operand = new MethodReference("get_UtcNow", now.ReturnType, now.DeclaringType) { HasThis = false };
+                    utc++;
+                }
+        if (utc == 0) throw new InvalidOperationException("DateTime.Now not found in SystemClock/DateTimeUtil");
+        Console.WriteLine($"  redirect -> game clock DateTime.Now x{utc} -> UtcNow");
+
         // Mute: FMOD_StudioSystem.Init calls setAdvancedSettings before initializing the audio device.
         var fmodInit = Target("FMOD_StudioSystem", "Init");
         var fmodCalls = fmodInit.Body.Instructions.Where(i => i.Operand is MethodReference mr && mr.Name == "setAdvancedSettings").ToList();
