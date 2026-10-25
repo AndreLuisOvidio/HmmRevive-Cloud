@@ -109,6 +109,7 @@ static class Legacy
 
         Patch(Path.Combine(game, managedRel, TargetDll), Path.Combine(managed, TargetDll), Path.Combine(managed, ModDll));
         SteamOff(Path.Combine(game, managedRel, SteamDll), Path.Combine(managed, SteamDll));
+        File.WriteAllText(Path.Combine(managed, "hmmrevive-patch.txt"), PatchRevision.ToString()); // last: a half-patched copy has no marker
         return 0;
     }
 
@@ -213,6 +214,11 @@ static class Legacy
     }
 
     // --- patch table (keep in sync with mod/HmmRevive.Legacy/Hooks.cs) ---
+    // Written to HMM_Data/Managed/hmmrevive-patch.txt of every patched copy; the launcher offers "update the game" while a copy has an
+    // older one (Builds.LegacyPatchRevision). Raise both when the patch changes under the same mod version.
+    // 1: before the marker existed. 2: the game's clock reads UTC.
+    const int PatchRevision = 2;
+
     static void Patch(string original, string output, string modDll)
     {
         var resolver = new DefaultAssemblyResolver();
