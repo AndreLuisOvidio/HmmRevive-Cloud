@@ -335,8 +335,8 @@ T9 → T10 → T11 → T12
 
 **Done when**:
 
-- [ ] Every new key exists in both languages
-- [ ] Gate check passes: `dotnet build tools/Launcher -c Release && dotnet test tools/Launcher.Tests`
+- [x] Every new key exists in both languages
+- [x] Gate check passes: `dotnet build tools/Launcher -c Release && dotnet test tools/Launcher.Tests`
 
 **Tests**: none
 **Gate**: build

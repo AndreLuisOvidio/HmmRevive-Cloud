@@ -247,7 +247,7 @@ The lobby draft today works per team: a team's turn bans or picks several cars a
 | DRAFT-13 | P1: Full-window draft screen | Execute | Verified |
 | DRAFT-14 | P1: Host settings and version | Execute | Verified |
 | DRAFT-15 | P2: Suggest bans | Execute | Implementing |
-| DRAFT-16 | P1: Your-turn alert | Tasks | Pending |
+| DRAFT-16 | P1: Your-turn alert | Execute | Implementing |
 
 **ID format:** `DRAFT-NN`
 
