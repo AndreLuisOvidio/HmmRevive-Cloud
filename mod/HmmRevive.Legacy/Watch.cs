@@ -36,7 +36,7 @@ namespace HmmRevive.Legacy
             if (gap > _maxDt) _maxDt = gap;
             if (gap > 0.1f) Log.Info("STALL " + (Entry.ServerMode ? "server" : "client") + " frame took " + (gap * 1000f).ToString("0") + " ms");
             MatchEnd.Tick(hub);
-#if !Y2016
+#if Y2017SEP
             if (Entry.ServerMode) TrackCars(hub);
 #endif
             Ball.Tick(hub);
@@ -75,7 +75,7 @@ namespace HmmRevive.Legacy
 #endif
         }
 
-#if !Y2016
+#if Y2017SEP
         // Metres the cars covered since the last WATCH line (server only): frozen cars at the start of a match show up as 0.
         private void TrackCars(HMMHub hub)
         {
