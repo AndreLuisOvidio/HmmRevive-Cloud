@@ -21,6 +21,10 @@ Newest first. The version is shown on the first line of every kit window (setup,
 - **Your car, big:** once your pick is locked it shows in the middle with its skins; clicking a skin changes it.
   After 20 s of finalization, or once everyone is Ready, the match starts with everyone on their drafted car.
 - The host no longer writes ban/pick orders, and a turn lasts 30 s by default (was 60 s).
+- **September 2017 build, in another time zone:** the game's clock was local time, so a host and a player in different
+  time zones (Brazil and Portugal, or a server in UTC) were hours apart: the match clock showed -59:-11, the cars stayed
+  at the start and abilities fired on their own. The patcher now makes the game read UTC. The server's `WATCH` line also
+  shows its speed (frames and steps per second, worst frame, metres the cars moved) and logs any frame over 100 ms.
 - **Version 1.8:** the lobby protocol changed, so a 1.8 lobby refuses 1.7 players and the other way round. Cloud
   lobbies of 1.8 need the 1.8 server image.
 
