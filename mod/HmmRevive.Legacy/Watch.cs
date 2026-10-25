@@ -108,7 +108,20 @@ namespace HmmRevive.Legacy
         // The game's own latency gauge (Pocketverse.NetworkTime, from its clock sync): average and worst round trip.
         private static string Ping(HMMHub hub)
         {
-            return hub.Clock != null ? " ping avg=" + hub.Clock.PingAvgMillis + " max=" + hub.Clock.PingMaxMillis + " ms" : "";
+            return hub.Clock != null ? " ping avg=" + hub.Clock.PingAvgMillis + " max=" + hub.Clock.PingMaxMillis + " ms" + ClockSync(hub.Clock) : "";
+        }
+
+        // How many clock samples the game got from the server (UDP game port + 5000). Under 10 the client runs on its own clock
+        // (ServerClock falls back to it): a time zone or a PC clock error then shows as a negative match clock and late inputs.
+        private static string ClockSync(object networkTime)
+        {
+            try
+            {
+                var f = networkTime.GetType().GetField("_client", BindingFlags.Instance | BindingFlags.NonPublic);
+                var client = f != null ? f.GetValue(networkTime) as Pocketverse.Clock.TimeClient : null;
+                return client != null ? " clockSync=" + client.ServerClock.samples + (client.ServerClock.samples >= 10 ? "" : "(NOT SYNCED)") : "";
+            }
+            catch (Exception) { return ""; }
         }
 
         private string Speed()

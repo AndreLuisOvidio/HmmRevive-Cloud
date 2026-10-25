@@ -817,7 +817,13 @@ namespace HmmRevive.Launcher
             catch { return false; }
         }
 
-        private static string GameRuleOf(string build) => Builds.IsLegacy(build) ? GameRule + " " + build : GameRule;
+        /// <summary>The 2017 builds sync the client clock with the server over a second UDP port, the game port + 5000: a host's
+        /// firewall must let it in too, or joiners never sync and run on their own clock (time zone, PC clock error).</summary>
+        public static string GamePorts(string build, int gamePort) => Builds.IsLegacy(build) ? gamePort + "," + (gamePort + 5000) : gamePort.ToString();
+
+        // The rule of an old build was renamed when it got the clock port: a host with the old rule is asked again.
+        public static string GameRuleOf(string build) => Builds.IsLegacy(build) ? GameRule + " " + build + " + clock" : GameRule;
+        public static string OldGameRuleOf(string build) => GameRule + " " + build;
 
         public static bool Ready() => Builds.ReadyBuilds().DefaultIfEmpty(Builds.Steam).All(b => RuleExists(GameRuleOf(b), Builds.GameExe(b)))
             && RuleExists(LobbyRule, Paths.LauncherExe) && RuleExists(FindRule, Paths.LauncherExe);
@@ -831,13 +837,13 @@ namespace HmmRevive.Launcher
         public static bool Setup(int gamePort, int lobbyPort)
         {
             string me = Paths.LauncherExe.Replace("'", "''");
-            var games = Builds.ReadyBuilds().DefaultIfEmpty(Builds.Steam).Select(b => (rule: GameRuleOf(b), exe: Builds.GameExe(b).Replace("'", "''"))).ToList();
+            var games = Builds.ReadyBuilds().DefaultIfEmpty(Builds.Steam).Select(b => (rule: GameRuleOf(b), old: Builds.IsLegacy(b) ? OldGameRuleOf(b) : null, ports: GamePorts(b, gamePort), exe: Builds.GameExe(b).Replace("'", "''"))).ToList();
             // A PC with a public address (a server/VPS) is joined straight over the internet: allow any address then.
             bool publicHost = Net.Addresses().Any(a => a["kind"] as string == "Internet");
             string from = $"-RemoteAddress {(publicHost ? "Any" : "LocalSubnet,100.64.0.0/10")} -Action Allow -Profile Any";
             string cmd =
-                $"Remove-NetFirewallRule -DisplayName {string.Join(",", games.Select(g => $"'{g.rule}'"))},'{LobbyRule}','{FindRule}' -ErrorAction SilentlyContinue; " +
-                string.Concat(games.Select(g => $"New-NetFirewallRule -DisplayName '{g.rule}' -Direction Inbound -Protocol UDP -LocalPort {gamePort} -Program '{g.exe}' {from} | Out-Null; ")) +
+                $"Remove-NetFirewallRule -DisplayName {string.Join(",", games.SelectMany(g => g.old == null ? new[] { g.rule } : new[] { g.rule, g.old }).Select(n => $"'{n}'"))},'{LobbyRule}','{FindRule}' -ErrorAction SilentlyContinue; " +
+                string.Concat(games.Select(g => $"New-NetFirewallRule -DisplayName '{g.rule}' -Direction Inbound -Protocol UDP -LocalPort {g.ports} -Program '{g.exe}' {from} | Out-Null; ")) +
                 $"New-NetFirewallRule -DisplayName '{LobbyRule}' -Direction Inbound -Protocol TCP -LocalPort {lobbyPort} -Program '{me}' {from} | Out-Null; " +
                 $"New-NetFirewallRule -DisplayName '{FindRule}' -Direction Inbound -Protocol UDP -LocalPort {lobbyPort} -Program '{me}' {from} | Out-Null; " +
                 $"Get-NetFirewallApplicationFilter | Where-Object {{ {string.Concat(games.Select(g => $"$_.Program -eq '{g.exe}' -or "))}$_.Program -eq '{me}' }} | Get-NetFirewallRule | " +

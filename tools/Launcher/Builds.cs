@@ -63,6 +63,21 @@ namespace HmmRevive.Launcher
             }
         }
 
+        /// <summary>The patch revision an old build's copy must have (tools/Patcher/Legacy.cs writes it to
+        /// HMM_Data/Managed/hmmrevive-patch.txt). The mod version cannot tell a copy patched by an older Patcher: 1.8 preview 3
+        /// changed the patch (the game's clock reads UTC) under the same 1.8. Revision 1 is a copy with no marker.</summary>
+        public const int LegacyPatchRevision = 2;
+
+        public static int InstancePatchRevision(string build)
+        {
+            try { return int.TryParse(File.ReadAllText(Path.Combine(Instance(build), "HMM_Data", "Managed", "hmmrevive-patch.txt")).Trim(), out int r) && r > 0 ? r : 1; }
+            catch { return 1; }
+        }
+
+        /// <summary>Whether a set-up copy must be set up again: its mod is not the kit's, or an old build's patch is out of date.</summary>
+        public static bool NeedsUpdate(string build, bool ready, string kit, string inst, int patchRevision) =>
+            ready && kit != null && (inst != kit || (IsLegacy(build) && patchRevision < LegacyPatchRevision));
+
         public static string Instance(string build) => IsLegacy(build) ? Paths.Instance + "-" + build : Paths.Instance;
         public static string GameExe(string build) => Path.Combine(Instance(build), "HMM.exe");
         public static bool Ready(string build) => File.Exists(GameExe(build));
@@ -160,7 +175,7 @@ namespace HmmRevive.Launcher
                     ["version"] = inst,
                     ["kitVersion"] = kit,
                     ["canSetup"] = Paths.Patcher != null && kit != null,
-                    ["needsUpdate"] = Ready(b) && kit != null && inst != kit,
+                    ["needsUpdate"] = NeedsUpdate(b, Ready(b), kit, inst, InstancePatchRevision(b)),
                 });
             }
             return list.ToArray();

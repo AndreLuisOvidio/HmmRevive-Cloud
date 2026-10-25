@@ -4,7 +4,7 @@ Newest first. The version is shown on the first line of every kit window (setup,
 
 ## 1.8 (unreleased): the draft, LoL style
 
-Preview 3 adds the cloud lobbies of the Sep 2017 build and the UTC clock fix, below.
+Preview 3 adds the cloud lobbies of the Sep 2017 build and the UTC clock fix; preview 4 the clock sync fix, below.
 
 - **New draft** (lobby option "Draft before each match"): it takes the whole launcher window, with Team 1 and Team 2
   at the sides and the cars in the middle as pictures with their names. The team that starts and each player's
@@ -31,6 +31,12 @@ Preview 3 adds the cloud lobbies of the Sep 2017 build and the UTC clock fix, be
   Sep 2017 copy set up). The cloud server runs that game under 32-bit Wine, with the game files trimmed to 1.4 GiB, and the
   lobby, bots and rematch work as in a local Sep 2017 lobby. The cloud list shows each lobby's game, and the admin panel
   shows it too.
+- **Clock sync of the 2017 game (preview 4):** the old game keeps its clock in step with the server over a second UDP port, the
+  game port + 5000 (14696 for 9696). Cloud lobbies did not expose it and the Windows Firewall rule of a local host did not
+  let it in, so players never synced: they ran on their own clock, which showed as a negative match clock (-59:xx) for some
+  players, late inputs and the game's own ping gauge stuck at -1. Cloud lobbies of the 2017 build now expose it, the host's
+  firewall rule (named "... + clock", you are asked once) opens it, and the `WATCH` line of the client logs `clockSync=N`
+  (10 or more is synced). Copies set up with an older patch now show "update the game" (the patch has a revision).
 - **Version 1.8:** the lobby protocol changed, so a 1.8 lobby refuses 1.7 players and the other way round. Cloud
   lobbies of 1.8 need the 1.8 server image.
 
