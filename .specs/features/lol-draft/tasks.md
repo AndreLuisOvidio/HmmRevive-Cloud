@@ -287,8 +287,8 @@ T9 → T10 → T11 → T12
 
 **Done when**:
 
-- [ ] Names show on suggested cars; the hint tells non-banning players they can suggest
-- [ ] Gate check passes: `dotnet build tools/Launcher -c Release && dotnet test tools/Launcher.Tests`
+- [x] Names show on suggested cars; the hint tells non-banning players they can suggest
+- [x] Gate check passes: `dotnet build tools/Launcher -c Release && dotnet test tools/Launcher.Tests`
 
 **Tests**: none
 **Gate**: build
@@ -296,6 +296,8 @@ T9 → T10 → T11 → T12
 ---
 
 ### T11: Your-turn alert
+
+> SPEC_DEVIATION: committed together with T10 (same functions in app.js; no partial staging in this environment).
 
 **What**: Pulsing frame, center banner with the action and seconds, a short sound once and the window title when the player must act (turn, request, Ready in finalization).
 **Where**: `tools/Launcher/web/app.js`
@@ -310,8 +312,8 @@ T9 → T10 → T11 → T12
 
 **Done when**:
 
-- [ ] Frame, banner, sound and title behave as DRAFT-16 says
-- [ ] Gate check passes: `dotnet build tools/Launcher -c Release && dotnet test tools/Launcher.Tests`
+- [x] Frame, banner, sound and title behave as DRAFT-16 says
+- [x] Gate check passes: `dotnet build tools/Launcher -c Release && dotnet test tools/Launcher.Tests`
 
 **Tests**: none
 **Gate**: build

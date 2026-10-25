@@ -758,18 +758,42 @@ const mySkinFor = (car) => (S.settings.skins || {})[carName(car)] ?? "0";
 const dsSeats = (D, team) => (D.seats && D.seats[team]) || [];
 const dsMine = (D, me) => (isPlayer(me) ? dsSeats(D, me.team).find((s) => s.id === me.id) : null);
 const dsName = (L, s) => { const m = !s.bot && L.members.find((x) => x.id === s.id); return m ? m.name : t("bot"); };
+// My team bans now and I'm not the one banning: my clicks suggest the ban.
+const dsSuggesting = (turn, me, mine) => !!(turn && !turn.pick && turn.team === me.team && mine && !mine.acting);
+const baseTitle = document.title;
+let dsTurnKey = ""; // the turn my last alert sound was for
+let dsAudio = null;
+// Two short tones when my turn starts (the page has had clicks by then, so the browser lets it play).
+function dsBeep() {
+  try {
+    dsAudio = dsAudio || new (window.AudioContext || window.webkitAudioContext)();
+    if (dsAudio.state === "suspended") dsAudio.resume();
+    const now = dsAudio.currentTime;
+    for (const [freq, at] of [[880, 0], [1320, 0.16]]) {
+      const o = dsAudio.createOscillator(), g = dsAudio.createGain();
+      o.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, now + at);
+      g.gain.exponentialRampToValueAtTime(0.25, now + at + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + at + 0.15);
+      o.connect(g).connect(dsAudio.destination);
+      o.start(now + at);
+      o.stop(now + at + 0.16);
+    }
+  } catch (e) { }
+}
 
 function renderDraftScreen() {
   const L = S.lobby, D = L && L.draft;
   const on = !!(D && L.phase === "draft");
   $("#draft-screen").hidden = !on;
   document.body.classList.toggle("drafting", on);
-  if (!on) { dsGrid = false; dsPending = null; return; }
+  if (!on) { dsGrid = false; dsPending = null; dsTurnKey = ""; document.title = baseTitle; return; }
   const me = L.members.find((m) => m.id === L.me) || {};
   const mine = dsMine(D, me);
   const A = D.first, B = A === "blue" ? "red" : "blue";
   const turn = D.stage === "turns" ? D.turns[D.step] : null;
-  if (dsPending && (Date.now() - dsPending.at > 3000 || (mine && (mine.mark === dsPending.car || mine.intent === dsPending.car)))) dsPending = null;
+  const p = dsPending && dsPending.car;
+  if (dsPending && (Date.now() - dsPending.at > 3000 || (mine && (mine.mark === p || mine.intent === p || (mine.suggest || "") === p)))) dsPending = null;
 
   // What is happening now, and the clock
   let title, sub, side = "";
@@ -806,6 +830,20 @@ function renderDraftScreen() {
       + `<button class="primary" data-danswer="${r.id}:1">${t("ds_accept")}</button><button data-danswer="${r.id}:0">${t("ds_decline")}</button></div>`)
     .concat(reqs.filter((r) => r.from === mine.pos).map((r) => `<div class="ds-req out">${esc(t("ds_req_waiting", dsName(L, seatOf(r.to)), r.secondsLeft))}</div>`)).join(""));
 
+  // Whatever needs me now (my turn, a teammate's request, Ready in finalization): a pulsing frame and a banner.
+  let need = "";
+  if (mine && mine.acting) need = t(turn.pick ? "ds_alert_pick" : "ds_alert_ban");
+  else if (reqs.some((r) => r.to === mine.pos)) need = t("ds_alert_answer");
+  else if (D.stage === "final" && isPlayer(me) && !me.ready) need = t("ds_alert_ready");
+  $("#draft-screen").classList.toggle("alert", !!need);
+  $("#ds-alert").hidden = !need;
+  paint($("#ds-alert"), need ? `<b>${esc(need)}</b>${D.secondsLeft >= 0 ? `<span>${t("draft_seconds", D.secondsLeft)}</span>` : ""}` : "");
+  // My turn starting: a short sound once, and the window title (seen on the taskbar) until the turn ends.
+  const turnKey = mine && mine.acting ? D.step + ":" + mine.pos : "";
+  if (turnKey && turnKey !== dsTurnKey) dsBeep();
+  dsTurnKey = turnKey;
+  document.title = (turnKey ? t("ds_title_turn") + " · " : "") + baseTitle;
+
   // The middle: my car big with its skins once I have one, else the cars
   paint($("#ds-body"), mine && mine.car && !dsGrid ? dsShowHtml(mine.car) : dsGridHtml(L, D, me, mine));
 
@@ -819,6 +857,7 @@ function renderDraftScreen() {
     actions = `<button class="ready big${me.ready ? " on" : ""}" data-dready="1">${t(me.ready ? "ready_on" : "ready")}</button><span class="hint">${t("ds_final_hint")}</span>`;
   } else if (!isPlayer(me)) actions = `<span class="hint">${t("ds_watching")}</span>`;
   else if (D.stage === "plan") actions = `<span class="hint">${t("ds_plan_hint")}</span>`;
+  else if (dsSuggesting(turn, me, mine)) actions = `<span class="hint">${t("ds_suggest_hint")}</span>`;
   else actions = `<span class="hint">${t(turn && turn.team === me.team ? "ds_team_choosing" : "ds_other_choosing")}</span>`;
   paint($("#ds-actions"), actions);
 
@@ -856,11 +895,16 @@ function dsSeatHtml(L, D, team, s, me, mine) {
 }
 
 function dsGridHtml(L, D, me, mine) {
-  const banned = {}, picked = {}, mates = {};
+  const banned = {}, picked = {}, mates = {}, suggested = {};
   D.bans.forEach((c) => (banned[c.car] = c.team));
   D.picks.forEach((c) => (picked[c.car] = c.team));
-  const myCar = mine && (dsPending ? dsPending.car : mine.acting ? mine.mark : mine.intent);
-  if (mine) dsSeats(D, me.team).forEach((s) => { const c = s.mark || s.intent; if (c && s.pos !== mine.pos && !s.car) mates[c] = dsName(L, s); });
+  const turn = D.stage === "turns" ? D.turns[D.step] : null;
+  const myCar = mine && (dsPending ? dsPending.car : mine.acting ? mine.mark : dsSuggesting(turn, me, mine) ? mine.suggest : mine.intent);
+  if (mine) dsSeats(D, me.team).forEach((s) => {
+    const c = s.mark || s.intent;
+    if (c && s.pos !== mine.pos && !s.car) mates[c] = dsName(L, s);
+    if (s.suggest) (suggested[s.suggest] = suggested[s.suggest] || []).push(dsName(L, s)); // ban advice, names on the car
+  });
   // I can click a car on my turn, or plan one before my pick.
   const canClick = !!mine && !mine.car && (mine.acting || D.stage === "plan" || D.stage === "turns");
   const tiles = C.cars.map((c) => {
@@ -871,8 +915,10 @@ function dsGridHtml(L, D, me, mine) {
     else if (id === myCar) cls += " sel";
     else if (mates[id]) { cls += " mate"; tag = mates[id]; }
     const free = !banned[id] && !picked[id];
+    const sug = free && suggested[id] ? `<span class="ds-sug">${esc(t("ds_ban_q", suggested[id].join(", ")))}</span>` : "";
+    if (sug) cls += " suggested";
     return `<button class="${cls}" data-dcar="${id}"${free && canClick ? "" : " disabled"}><span class="ds-pic">${dsPic(id)}</span>`
-      + `<span class="ds-nm">${esc(c.name)}</span>${tag ? `<span class="ds-tag">${esc(tag)}</span>` : ""}</button>`;
+      + `<span class="ds-nm">${esc(c.name)}</span>${sug}${tag ? `<span class="ds-tag">${esc(tag)}</span>` : ""}</button>`;
   }).join("");
   return (mine && mine.car ? `<button class="linkbtn" data-dgrid="0">${t("ds_back_car")}</button>` : "") + `<div class="ds-grid">${tiles}</div>`;
 }
@@ -1038,7 +1084,10 @@ document.addEventListener("click", async (e) => {
   if (b.dataset.setupBuild) return act("setup", { build: b.dataset.setupBuild });
   // The draft screen. A clicked car shows at once; the lock waits for that click to reach the lobby.
   if (b.dataset.dcar) {
-    dsPending = { car: b.dataset.dcar, at: Date.now() };
+    // Clicking my own ban suggestion again takes it back: show it gone at once.
+    const L = S.lobby, D = L.draft, me = L.members.find((m) => m.id === L.me) || {}, mine = dsMine(D, me);
+    const off = dsSuggesting(D.stage === "turns" ? D.turns[D.step] : null, me, mine) && mine.suggest === b.dataset.dcar;
+    dsPending = { car: off ? "" : b.dataset.dcar, at: Date.now() };
     renderDraftScreen();
     dsMarking = act("lobby/draft", { action: "mark", car: b.dataset.dcar });
     return;

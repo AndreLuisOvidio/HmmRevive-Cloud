@@ -479,3 +479,29 @@ body.drafting { overflow: hidden; }
   .ds-team.right .ds-pos, .ds-team.right .ds-av, .ds-team.right .ds-who { order: 0; }
 }
 @media (prefers-reduced-motion: reduce) { .dots::after { animation: none; width: 1.3em; } }
+/* Draft: when I must act (my turn, a request to me, Ready in finalization) the whole window says so */
+.dscreen.alert::after {
+  content: ""; position: fixed; inset: 0; z-index: 60; pointer-events: none;
+  border: 5px solid var(--accent); box-shadow: inset 0 0 70px #ff7a1a55; animation: ds-pulse 1.1s ease-in-out infinite;
+}
+@keyframes ds-pulse { 50% { opacity: .3; } }
+.ds-alert {
+  display: flex; align-items: center; justify-content: center; gap: 16px; padding: 12px 18px; border-radius: var(--radius);
+  background: var(--accent); color: var(--accent-ink); text-align: center; animation: ds-pop .35s ease-out;
+}
+.ds-alert[hidden] { display: none; }
+.ds-alert b { font: 800 24px var(--head); letter-spacing: .06em; text-transform: uppercase; }
+.ds-alert span { font: 700 20px var(--head); font-variant-numeric: tabular-nums; padding: 2px 12px; border-radius: 999px; background: #0003; }
+@keyframes ds-pop { from { transform: scale(.94); opacity: 0; } }
+.dscreen.alert .ds-actions .primary, .dscreen.alert .ds-actions .ready { animation: ds-glow 1.1s ease-in-out infinite; }
+@keyframes ds-glow { 50% { box-shadow: 0 0 0 4px #ff7a1a55, 0 0 24px #ff7a1a88; } }
+/* Ban suggestions: the teammates' names on the car */
+.ds-tile.suggested { border-color: var(--warn); }
+.ds-sug {
+  position: absolute; left: 4px; right: 4px; top: 4px; padding: 1px 5px; border-radius: 4px; text-align: left;
+  font: 700 10.5px var(--head); color: #1a1202; background: #ffc34deb; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ds-tile.suggested .ds-tag { top: 24px; }
+@media (prefers-reduced-motion: reduce) {
+  .dscreen.alert::after, .ds-alert, .dscreen.alert .ds-actions .primary, .dscreen.alert .ds-actions .ready { animation: none; }
+}
