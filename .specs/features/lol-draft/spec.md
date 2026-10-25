@@ -190,26 +190,26 @@ The lobby draft today works per team: a team's turn bans or picks several cars a
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| DRAFT-01 | P1: Draft by position (AC1 draw) | Execute | Implementing |
-| DRAFT-02 | P1: Draft by position (AC2 order) | Execute | Implementing |
-| DRAFT-03 | P1: Draft by position (AC3 missing positions) | Execute | Implementing |
-| DRAFT-04 | P1: Draft by position (AC4 planning) | Execute | Implementing |
-| DRAFT-05 | P1: Draft by position (AC5-9 mark and lock) | Execute | Implementing |
-| DRAFT-06 | P1: Draft by position (AC10 time out) | Execute | Implementing |
-| DRAFT-07 | P1: Draft by position (AC11-12 bots and leavers) | Execute | Implementing |
-| DRAFT-08 | P1: Draft by position (AC13 integrity) | Execute | Implementing |
-| DRAFT-09 | P1: What each side sees | Execute | Implementing |
-| DRAFT-10 | P1: Finalization and the match | Execute | Implementing |
-| DRAFT-11 | P2: Swap positions | Execute | Implementing |
-| DRAFT-12 | P2: Trade cars | Execute | Implementing |
-| DRAFT-13 | P1: Full-window draft screen | Execute | Implementing |
-| DRAFT-14 | P1: Host settings and version | Execute | Implementing |
+| DRAFT-01 | P1: Draft by position (AC1 draw) | Execute | Verified |
+| DRAFT-02 | P1: Draft by position (AC2 order) | Execute | Verified |
+| DRAFT-03 | P1: Draft by position (AC3 missing positions) | Execute | Verified |
+| DRAFT-04 | P1: Draft by position (AC4 planning) | Execute | Verified |
+| DRAFT-05 | P1: Draft by position (AC5-9 mark and lock) | Execute | Verified |
+| DRAFT-06 | P1: Draft by position (AC10 time out) | Execute | Verified |
+| DRAFT-07 | P1: Draft by position (AC11-12 bots and leavers) | Execute | Verified |
+| DRAFT-08 | P1: Draft by position (AC13 integrity) | Execute | Verified |
+| DRAFT-09 | P1: What each side sees | Execute | Verified |
+| DRAFT-10 | P1: Finalization and the match | Execute | Verified |
+| DRAFT-11 | P2: Swap positions | Execute | Verified |
+| DRAFT-12 | P2: Trade cars | Execute | Verified |
+| DRAFT-13 | P1: Full-window draft screen | Execute | Verified |
+| DRAFT-14 | P1: Host settings and version | Execute | Verified |
 
 **ID format:** `DRAFT-NN`
 
 **Status values:** Pending → In Design → In Tasks → Implementing → Verified
 
-**Coverage:** 14 total, 14 mapped to tasks, 0 unmapped
+**Coverage:** 14 total, 14 mapped to tasks, 14 verified, 0 unmapped
 
 ---
 

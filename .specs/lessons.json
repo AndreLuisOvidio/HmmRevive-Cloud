@@ -1,0 +1,63 @@
+{
+  "schema": 1,
+  "promote_threshold": 2,
+  "window_days": 45,
+  "quarantine_threshold": 2,
+  "next_id": 4,
+  "lessons": [
+    {
+      "id": "L-001",
+      "key": "surviving_mutant::when tests shorten a spec defined default time through a parameter or seam also assert the default value itself in one test",
+      "text": "When tests shorten a spec-defined default time through a parameter or seam, also assert the default value itself in one test",
+      "signal": "surviving_mutant",
+      "scope": "launcher-tests",
+      "status": "candidate",
+      "features": [
+        "lol-draft"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md M8/M9 tools/Launcher/SeatDraft.cs:19 (launcher-tests)"
+      ],
+      "created": "2026-10-25T00:27:37Z",
+      "last_seen": "2026-10-25T00:27:37Z"
+    },
+    {
+      "id": "L-002",
+      "key": "ac_gap::when an ac relies on existing behavior triggered by the change such as a version bump gating joins add a test that exercises that behavior not only the changed constant",
+      "text": "When an AC relies on existing behavior triggered by the change (such as a version bump gating joins), add a test that exercises that behavior, not only the changed constant",
+      "signal": "ac_gap",
+      "scope": "launcher-tests",
+      "status": "candidate",
+      "features": [
+        "lol-draft"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "DRAFT-14 AC3 tools/Launcher/Lobby.cs:288 (launcher-tests)"
+      ],
+      "created": "2026-10-25T00:27:37Z",
+      "last_seen": "2026-10-25T00:27:37Z"
+    },
+    {
+      "id": "L-003",
+      "key": "surviving_mutant::assert that a refused or no op action leaves the visible state unchanged not only that it returns no error",
+      "text": "Assert that a refused or no-op action leaves the visible state unchanged, not only that it returns no error",
+      "signal": "surviving_mutant",
+      "scope": "launcher-tests",
+      "status": "candidate",
+      "features": [
+        "lol-draft"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md M11 tools/Launcher/SeatDraft.cs:94 (launcher-tests)"
+      ],
+      "created": "2026-10-25T00:27:38Z",
+      "last_seen": "2026-10-25T00:27:38Z"
+    }
+  ]
+}
