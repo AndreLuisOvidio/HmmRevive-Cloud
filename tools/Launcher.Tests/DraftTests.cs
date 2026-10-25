@@ -338,6 +338,15 @@ namespace HmmRevive.Launcher.Tests
         }
 
         [Fact]
+        public void DuringTheTeamsPickTurnAClickIsStillAPlan()
+        {
+            var d = Four();
+            Play(d, "1"); Play(d, "2"); Play(d, "3"); Play(d, "4", "5"); // blue positions 2 and 3 pick now
+            d.Mark("blue", 4, "9");
+            Assert.Equal(("9", null), (Seat(d, "blue", 4).Intent, Seat(d, "blue", 4).Suggest));
+        }
+
+        [Fact]
         public void SuggestionsShowOnlyToTheOwnTeam()
         {
             var d = Four();

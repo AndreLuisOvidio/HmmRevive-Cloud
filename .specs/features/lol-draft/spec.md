@@ -208,7 +208,7 @@ The lobby draft today works per team: a team's turn bans or picks several cars a
 **Acceptance Criteria**:
 
 1. WHILE the player's position acts in the current turn the draft screen SHALL show a pulsing colored frame around the window and a banner in the middle that names the action ("Your turn: ban 1 car" or "Your turn: pick your car") with the seconds left.
-2. WHEN the player's turn starts THEN the page SHALL play a short sound once and show "Your turn" at the start of the window title until the turn ends.
+2. WHEN the player's turn starts THEN the page SHALL play a short sound once and show "Your turn" at the start of the window title until the player locks in or the turn ends.
 3. WHILE a teammate's request to the player waits for an answer the draft screen SHALL show the same frame and a banner asking for the answer.
 4. WHILE finalization runs and the player is not ready the draft screen SHALL show the same frame and a banner asking to choose a skin and click Ready.
 5. WHILE a ban turn of the player's team runs and the player is not banning the draft screen SHALL tell the player they can suggest a ban by clicking a car.
