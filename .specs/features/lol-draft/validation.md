@@ -2,15 +2,131 @@
 
 **Date**: 2026-10-24
 **Spec**: `.specs/features/lol-draft/spec.md`
-**Diff range**: `c64d8d5..HEAD` on `feat/lol-draft` (HEAD = `40116c0`; re-verification after fix iteration 1 = `6fdb522`, `40116c0`)
+**Diff range**: round 1 `c64d8d5..40116c0`; round 2 `c3bf798..eb48ba9` (DRAFT-15, DRAFT-16, plus round 2 fix iteration 1)
 **Verifier**: independent sub-agent (author ≠ verifier)
 
 **Verdict**: PASS
 
+Round 2 (DRAFT-15 ban suggestions, DRAFT-16 your-turn alert) passes after its fix iteration 1 (`eb48ba9`). The
+earlier round 2 check (at `f767577`) failed on one surviving mutant (S1). Round 1 (DRAFT-01..14) stays PASS; its full
+report is kept below the round 2 section. One owner ear-check remains for the beep (not a code task).
+
+---
+
+# Round 2: DRAFT-15 and DRAFT-16
+
+**Diff range**: `c3bf798..HEAD` (HEAD = `eb48ba9`): `5dedc93` engine + tests, `0b5b693` page, `f767577` texts,
+`eb48ba9` fix (new test `DuringTheTeamsPickTurnAClickIsStillAPlan`, DRAFT-16 AC2 wording).
+**Round 2 history**: first check at `f767577` FAIL (S1 survived, 6/7); re-check at `eb48ba9` PASS (7/7).
+
+## Task Completion (round 2)
+
+| Task | Status | Notes |
+| ---- | ------ | ----- |
+| T9 | ✅ Done | `SeatDraft.cs:97` (suggest), `:241` (Json), `:278` (clear in `StartTurn`); DT "DRAFT-15" block |
+| T10 | ✅ Done | names on suggested cars, suggest hint (`app.js:860`, `:902-921`, `:1087-1090`) |
+| T11 | ✅ Done | frame, banner, sound, title (`app.js:833-845`), styles at the end of `style.css`, `#ds-alert` in `index.html` |
+| T12 | ✅ Done | 7 new keys in `i18n.js`, all `[en, pt]` |
+| Fix R2-1 | ✅ Done | `eb48ba9`: DT:341-347 |
+
+`// SPEC_DEVIATION` (tasks.md T11): T10 and T11 were committed together (`0b5b693`). Process only; no behavior impact.
+
+## Spec-Anchored Acceptance Criteria (round 2)
+
+Test file: `tools/Launcher.Tests/DraftTests.cs` (DT), lines at `eb48ba9`.
+
+### DRAFT-15: Suggest bans
+
+| Criterion | Spec-defined outcome | `file:line` + assertion | Result |
+| --------- | -------------------- | ----------------------- | ------ |
+| AC1 suggestion while the own team bans, not banning, free car; replaces an earlier one | `Suggest` set (not `Intent`); last one wins; only in the team's **ban** turn | DT:316-319 `Assert.Equal("7", Seat(d, "blue", 2).Suggest)`, `Assert.Null(...Intent)`, then `"8"`; DT:337 the other team's ban turn → plan: `Assert.Equal(("7", null), (Intent, Suggest))`; DT:346 the own team's pick turn, non-acting position 4 → plan: `Assert.Equal(("9", null), (Seat(d, "blue", 4).Intent, Seat(d, "blue", 4).Suggest))` | ✅ PASS |
+| AC2 same car again removes it | `Suggest` null | DT:328 `Assert.Null(Seat(d, "blue", 3).Suggest)` after the second click | ✅ PASS |
+| AC3 own team only | own team sees `suggest`; other team, spectators, no team see "" | DT:354-356 `Assert.Equal("7", ...["suggest"])` for blue; `Assert.Equal("", ...)` for red/spec/null | ✅ PASS |
+| AC4 cleared when a ban turn ends | every `Suggest` null after the turn | DT:366, DT:369 `Assert.All(d.Seats["blue"], s => Assert.Null(s.Suggest))` after blue's ban, same for red | ✅ PASS |
+| AC5 timed-out ban never uses a suggestion | no ban (no mark), suggested car not banned | DT:378-379 `Assert.Null(Seat(d, "blue", 1).Ban)`, `Assert.DoesNotContain("7", ...Ban)` | ✅ PASS |
+| AC6 names of suggesting teammates on the car picture (page) | names on the tile | Static: `app.js:906` collects `suggested[car]` names from own-team seats; `app.js:918` `ds-sug` label `t("ds_ban_q", names.join(", "))` on free cars; style `.ds-sug` at the end of `style.css`. UAT: the banning player saw "Banir? Bia" | ✅ UAT + static |
+
+### DRAFT-16: Your-turn alert (page only; manual UAT + static review)
+
+| Criterion | Static evidence | UAT (author) | Result |
+| --------- | --------------- | ------------ | ------ |
+| AC1 frame + banner with action and seconds while acting | `app.js:835` `mine.acting` → `ds_alert_pick`/`ds_alert_ban`; `:838` `alert` class on `#draft-screen` (`.dscreen.alert::after` pulsing border); `:839-840` `#ds-alert` with `draft_seconds` | frame and "SUA VEZ: BANIR 1 CARRO" with seconds seen | ✅ |
+| AC2 sound once at turn start; "Your turn" title prefix until the player locks in or the turn ends (spec wording updated in `eb48ba9`) | `:842-845` `turnKey = step:pos` while acting (`acting` is false once locked); `dsBeep()` only when the key changes; title `ds_title_turn · base`; reset when the draft screen closes (`:790`) | title "▶ Sua vez · HMM Revive Cloud" seen; **sound not heard** | ✅ Title matches the updated spec. Sound: static logic looks right (`AudioContext` resumed in `dsBeep`); **owner ear-check pending** (not a code task) |
+| AC3 frame + banner for a request to me | `:836` `reqs.some((r) => r.to === mine.pos)` → `ds_alert_answer` (`reqs` is `[]` without a seat, `:825`, so no null access) | not exercised | ✅ static |
+| AC4 frame + banner in finalization while not ready | `:837` `D.stage === "final" && isPlayer(me) && !me.ready` → `ds_alert_ready` | not exercised | ✅ static |
+| AC5 suggest hint while the own team bans and I'm not banning | `:762` `dsSuggesting` = ban turn of my team, I have a seat, not acting (matches the engine condition at `SeatDraft.cs:97`); `:860` `ds_suggest_hint` | hint seen by the teammate | ✅ |
+| AC6 every new text in en and pt-BR | Node check: the 7 new keys (`ds_suggest_hint`, `ds_ban_q`, `ds_alert_ban`, `ds_alert_pick`, `ds_alert_answer`, `ds_alert_ready`, `ds_title_turn`) are 2 non-empty strings; every key used by `app.js`/`index.html` exists; `node --check app.js` OK | pt-BR texts seen | ✅ |
+
+Suggestion toggle in the click handler: `app.js:1087-1090` computes `off` (my own suggestion clicked again while suggesting) and shows it gone at once (`dsPending.car = ""`). The pending state clears when the lobby's `suggest` matches (`app.js:796`). Same toggle rule as the engine. UAT: a second click removed the suggestion. The page code is unchanged since the first round 2 check.
+
+## Discrimination Sensor (round 2)
+
+Re-check: `git worktree add %TEMP%/hmm-verify-wt HEAD` (at `eb48ba9`). Baseline in the scratch: 57/57 pass with
+`--filter FullyQualifiedName~DraftTests` (DraftTests + LobbyDraftTests). All 7 mutations re-run, one at a time, file
+restored after each. The worktree was clean afterwards, then removed with `git worktree remove --force` and pruned.
+Real tree `git status --porcelain` before = after (identical: the three `.specs` report/lessons files modified by this
+verifier).
+
+| # | File:line | Description | First check (`f767577`) | Re-check (`eb48ba9`) |
+| - | --------- | ----------- | ----------------------- | -------------------- |
+| S1 | `tools/Launcher/SeatDraft.cs:97` | Dropped `!Current.Pick`: during the own team's pick turn a non-acting player's click becomes a suggestion | ❌ Survived | ✅ Killed (`DuringTheTeamsPickTurnAClickIsStillAPlan`) |
+| S2 | `tools/Launcher/SeatDraft.cs:97` | Dropped `Current.Team == team`: clicks during the other team's ban become suggestions | ✅ Killed | ✅ Killed (`OutsideTheTeamsBanTurnAClickIsStillAPlan`) |
+| S3 | `tools/Launcher/SeatDraft.cs:97` | Toggle-off removed (`s.Suggest = car`) | ✅ Killed | ✅ Killed (`ClickingTheSuggestedCarAgainRemovesTheSuggestion`) |
+| S4 | `tools/Launcher/SeatDraft.cs:278` | `StartTurn` no longer clears suggestions | ✅ Killed | ✅ Killed (`SuggestionsAreClearedWhenTheBanTurnEnds`) |
+| S5 | `tools/Launcher/SeatDraft.cs:241` | `Json`: `suggest` shown to every team | ✅ Killed | ✅ Killed (`SuggestionsShowOnlyToTheOwnTeam`) |
+| S6 | `tools/Launcher/SeatDraft.cs:134` | Timed-out ban takes a teammate's free suggestion | ✅ Killed | ✅ Killed (`ATimedOutBanNeverUsesASuggestion`) |
+| S7 | `tools/Launcher/SeatDraft.cs:97` | A suggestion also overwrites the pick plan (`Intent`) | ✅ Killed | ✅ Killed (`ATeammateSuggestsABanAndTheLastSuggestionWins`) |
+
+**Sensor depth**: lightweight+ (7 manual mutations on the new engine code)
+**Result**: 7/7 killed. PASS ✅
+
+## Code Quality (round 2)
+
+| Principle | Status |
+| --------- | ------ |
+| Minimum code | ✅ Engine: one field, one branch, one Json key, one clearing line. Page: one helper (`dsSuggesting`), alert block, `dsBeep` (Web Audio, no asset file) |
+| Surgical changes | ✅ Only the draft functions in `app.js`; CSS appended at the end; one `index.html` element; the fix adds one test only |
+| No scope creep | ✅ |
+| Matches patterns | ✅ Same per-team visibility as `mark`/`intent`; same `t()`/`paint` page patterns; `prefers-reduced-motion` respected for the new animations |
+| Spec-anchored outcome check | ✅ AC1's boundary pinned against both the other team's ban turn and the own team's pick turn |
+| Every test maps to a spec requirement | ✅ The 7 new tests are labelled DRAFT-15 |
+| Documented guidelines followed: `CLAUDE.md` | ✅ Both languages for every new string; no protocol-version concern (an added JSON field, ignored by older pages, and lobbies already reject other versions); no game code |
+
+## Gate Check (round 2)
+
+- **Gate command**: `dotnet build tools/Launcher -c Release && dotnet test tools/Launcher.Tests`
+- **Result**: build 0 errors (1 pre-existing warning, `Program.cs:156`); 227 passed, 0 failed, 0 skipped (30 s)
+- **Test count**: 220 → 227 (+7 DRAFT-15 tests); no existing assertion changed
+
+## Fix Plans (round 2)
+
+### Fix R2-1: Pin the ban-turn boundary for suggestions (S1, DRAFT-15 AC1): done
+
+Done in `eb48ba9` (DT:341-347). S1 is now killed.
+
+### Owner ear-check (not a code task): the beep (DRAFT-16 AC2)
+
+The author's UAT didn't hear the sound; it only saw the title change at the turn start. The owner should confirm by ear,
+with one launcher in another window, that the two-tone beep plays once when the turn arrives.
+
+## Requirement Traceability Update (round 2)
+
+| Requirement | Previous Status | New Status |
+| ----------- | --------------- | ---------- |
+| DRAFT-15 | Needs Fix (S1) | ✅ Verified |
+| DRAFT-16 | Implementing | ✅ Verified (manual UAT + static review; beep pending an owner ear-check) |
+
+---
+
+# Round 1: DRAFT-01..14 (fix iteration 1), PASS
+
+**Round 1 verdict**: PASS (kept from the re-verification at `40116c0`)
+
 Iteration 1 (HEAD `216fffe`) failed: the 15 s planning and 20 s finalization defaults weren't pinned (M8, M9 survived),
 a locked position could still mark (M11 survived), the 1.8-refuses-1.7 refusal and the host reset had no direct test.
 Fix iteration 1 added those tests and fixed two non-spec findings in `Lobby.cs` (Ready reset at finalization, bot cars
-before leavers' cars). All 13 mutants are now killed.
+before leavers' cars). All 13 mutants were then killed. Line numbers in this section are as of `40116c0`; round 2
+inserted the DRAFT-15 block at DT:309-372, so DraftTests lines after 306 are now 64 higher.
 
 ---
 
@@ -149,7 +265,7 @@ from iteration 1).
 | M13 | `tools/Launcher/Lobby.cs:652` | Fix: reverted bot car order to position order (leavers before bots) | ✅ Killed (1: `BotsKeepTheirOwnPicksWhenAPlayerLeft`) |
 
 **Sensor depth**: expanded (13 manual mutations; no .NET mutation tool in the repo)
-**Result**: 13/13 killed. PASS ✅
+**Round 1 sensor outcome**: 13/13 killed (passed)
 
 ---
 

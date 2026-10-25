@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/lol-draft/design.md`
-**Status**: In Progress (round 2: ban suggestions and the your-turn alert)
+**Status**: Done (round 2: ban suggestions and the your-turn alert)
 
 ---
 

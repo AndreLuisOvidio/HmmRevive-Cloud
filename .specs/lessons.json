@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 4,
+  "next_id": 5,
   "lessons": [
     {
       "id": "L-001",
@@ -58,6 +58,24 @@
       ],
       "created": "2026-10-25T00:27:38Z",
       "last_seen": "2026-10-25T00:27:38Z"
+    },
+    {
+      "id": "L-004",
+      "key": "surviving_mutant::for a guard with several conditions add a negative test where each condition alone is false",
+      "text": "For a guard with several conditions, add a negative test where each condition alone is false",
+      "signal": "surviving_mutant",
+      "scope": "launcher-tests",
+      "status": "candidate",
+      "features": [
+        "lol-draft"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md round 2 S1 tools/Launcher/SeatDraft.cs:97 (launcher-tests)"
+      ],
+      "created": "2026-10-25T02:05:08Z",
+      "last_seen": "2026-10-25T02:05:08Z"
     }
   ]
 }

@@ -32,6 +32,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: validation.md M11 tools/Launcher/SeatDraft.cs:94 (launcher-tests)
 - last seen: 2026-10-25T00:27:38Z
 
+### L-004 - For a guard with several conditions, add a negative test where each condition alone is false
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `launcher-tests` · harmful: 0
+- features: lol-draft
+- evidence: validation.md round 2 S1 tools/Launcher/SeatDraft.cs:97 (launcher-tests)
+- last seen: 2026-10-25T02:05:08Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
