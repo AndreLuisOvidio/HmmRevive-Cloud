@@ -108,7 +108,6 @@
     <div class="row" id="cloud-bar" hidden></div>
     <div class="progress-panel server-game" id="server-game" hidden></div>
     <div class="status" id="lobby-status"></div>
-    <div class="panel draft" id="draft" hidden></div>
     <div class="teams">
       <div class="team blue"><div class="team-head"><h2 data-i18n="team_blue"></h2><span id="switch-blue"></span></div><div class="slots" id="slots-blue"></div></div>
       <div class="team red"><div class="team-head"><h2 data-i18n="team_red"></h2><span id="switch-red"></span></div><div class="slots" id="slots-red"></div></div>
@@ -175,8 +174,6 @@
           <label class="check"><input type="checkbox" id="h-spec"> <span data-i18n="spectator_seats"></span></label>
           <label class="check"><input type="checkbox" id="h-draft"> <span data-i18n="draft_option"></span></label>
           <div id="h-order-box">
-            <label><span data-i18n="draft_bans_order"></span> <input id="h-bans" class="order" spellcheck="false" autocomplete="off"></label>
-            <label><span data-i18n="draft_picks_order"></span> <input id="h-picks" class="order" spellcheck="false" autocomplete="off"></label>
             <label><span data-i18n="draft_time"></span> <select id="h-dtime"></select></label>
             <p class="hint" data-i18n="draft_order_hint"></p>
           </div>
@@ -250,6 +247,32 @@
     </div>
   </section>
 </main>
+
+<!-- DRAFT: takes the whole window while the lobby drafts (app.js renderDraftScreen) -->
+<div class="dscreen" id="draft-screen" hidden>
+  <div class="ds-top">
+    <div class="ds-head" id="ds-head"></div>
+    <div class="ds-tools" id="ds-tools"></div>
+  </div>
+  <div class="ds-chips" id="ds-chips"></div>
+  <div class="ds-main">
+    <div class="ds-team" id="ds-left"></div>
+    <div class="ds-center">
+      <div class="ds-alert" id="ds-alert" hidden></div>
+      <div id="ds-reqs"></div>
+      <div id="ds-body"></div>
+      <div class="ds-actions" id="ds-actions"></div>
+    </div>
+    <div class="ds-team right" id="ds-right"></div>
+  </div>
+  <aside class="ds-chat" id="ds-chat" hidden>
+    <div class="chat-log" id="ds-chat-log"></div>
+    <form class="row" id="ds-chat-form">
+      <input id="ds-chat-input" maxlength="200" data-i18n-ph="chat_ph" autocomplete="off">
+      <button type="submit" data-i18n="chat_send"></button>
+    </form>
+  </aside>
+</div>
 
 <div id="toast"></div>
 <script src="i18n.js"></script>

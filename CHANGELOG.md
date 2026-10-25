@@ -2,6 +2,28 @@
 
 Newest first. The version is shown on the first line of every kit window (setup, play, host).
 
+## 1.8 (unreleased): the draft, LoL style
+
+- **New draft** (lobby option "Draft before each match"): it takes the whole launcher window, with Team 1 and Team 2
+  at the sides and the cars in the middle as pictures with their names. The team that starts and each player's
+  position (1 to 4) are drawn, humans before bots. After 15 s of planning, position 1 of each team bans 1 car, then
+  each player picks their own car: Team 1: 1, Team 2: 2, Team 1: 2, Team 2: 1, Team 1: 1, Team 2: 1. Your team sees
+  your marked car; the other team only sees it once you lock in. When a turn's 30 s run out, a pick takes the marked
+  car (or a random one) and a ban the marked car (or none). Bots, and players who leave, ban nothing and pick at
+  once.
+- **Trades:** teammates can ask each other to swap positions (before either picks) or trade cars (after both
+  picked); the other player accepts or declines within 10 s. Trading with a bot of your team needs no answer.
+- **Ban suggestions** (preview 2): while a teammate bans, click a car to suggest it (click again to take it back); your
+  team sees your name on the car. Only your team sees suggestions, and a ban is still only the banning player's choice.
+- **Your turn, impossible to miss** (preview 2): when you must act (your ban or pick, a teammate's request, Ready in
+  finalization) the window gets a pulsing frame and a banner with the action and the seconds left; your turn also plays a
+  short sound and shows "Your turn" in the window title.
+- **Your car, big:** once your pick is locked it shows in the middle with its skins; clicking a skin changes it.
+  After 20 s of finalization, or once everyone is Ready, the match starts with everyone on their drafted car.
+- The host no longer writes ban/pick orders, and a turn lasts 30 s by default (was 60 s).
+- **Version 1.8:** the lobby protocol changed, so a 1.8 lobby refuses 1.7 players and the other way round. Cloud
+  lobbies of 1.8 need the 1.8 server image.
+
 ## 1.7 (2026-10-24): HMM Revive Cloud
 
 The first release of **HMM Revive Cloud**, a parallel version of HMM Revive kept by AndreLuisOvidio (the original is

@@ -16,7 +16,7 @@ namespace HmmRevive.Launcher.Tests
         [Fact]
         public void TheVersionIsTheCloudLine()
         {
-            Assert.Equal("1.7", Program.Version);
+            Assert.Equal("1.8", Program.Version);
         }
     }
 }

@@ -271,7 +271,7 @@ namespace HmmRevive.Launcher
                 {
                     Session s = _session;
                     if (s == null) return Response.Error("You're not in a lobby.");
-                    string err = s.DraftAct(d.Str("action"), d.Str("car"));
+                    string err = s.DraftAct(d.Str("action"), d.Str("car"), d.Int("target"), d.Int("request"));
                     return err == null ? Ok() : Response.Error(err);
                 }
                 case "/api/lobby/chat":

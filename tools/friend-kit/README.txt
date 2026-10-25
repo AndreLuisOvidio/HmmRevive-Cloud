@@ -65,10 +65,14 @@ HOST (one person, on a PC that stays on during the match)
   - Click "Open lobby". Players on your network see it under Play; others can type the address shown in the lobby.
 
 Tournaments (in the lobby's match settings, host only)
-  - "Draft before each match": starting the match first starts a draft. A random team goes first, then the teams
-    take turns banning cars and then picking them (by default bans A1 B1, picks A1 B2 A2 B1 A1 B1; A = the team that
-    goes first; the host can change both). Each turn has 60 seconds by default; when time runs out the turn is
-    completed at random. After the draft each player chooses one of the team's cars and clicks Ready again.
+  - "Draft before each match": starting the match first opens the draft over the whole launcher window, like League
+    of Legends. The team that starts (Team 1) and each player's position (1 to 4) are drawn. After 15 seconds of
+    planning, position 1 of each team bans 1 car, then each player picks their own car in this order: Team 1: 1,
+    Team 2: 2, Team 1: 2, Team 2: 1, Team 1: 1, Team 2: 1. Each turn has 30 seconds by default; when time runs out a
+    pick takes the marked car (or a random one) and a ban takes the marked car (or none). Teammates can ask each
+    other to swap positions (before picking) or trade cars (after picking), and suggest bans while a teammate bans
+    (your team sees your name on the car). When you must act, the window flashes. Your car then shows big with its skins.
+    The match starts after 20 seconds of finalization, or as soon as everyone clicks Ready.
   - "2 spectator seats": up to two people watch the match with the game's spectator camera, without a car
     (click "Watch" in the lobby). They can join a match that is already running.
 
