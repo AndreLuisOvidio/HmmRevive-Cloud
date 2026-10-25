@@ -41,6 +41,10 @@ The lobby draft today works per team: a team's turn bans or picks several cars a
 | Swap request window | Allowed while neither player has a picked car and neither is acting in the current turn; expires after 10 s | From the approved design | y |
 | Car trade window | Allowed once both have a picked car, until the match starts; expires after 10 s; trading with a bot of the team needs no consent | From the approved design | y |
 | Team sizes below 4 | Positions beyond a team's players + bots do not exist; their actions are skipped | A 2v2 lobby must still draft | n |
+| Who sees ban suggestions | Only the suggesting player's own team (spectators and the other team do not) | Like marks: showing the other team what you plan to ban gives the plan away | n |
+| A click by a non-banning player during their team's ban turn | A ban suggestion (not a pick plan); clicking the same car again removes it | Owner asked for suggestions during the ban; a plan can still be set before or after | n |
+| Ban suggestions and the time out | A timed-out ban still takes only the banning player's mark, never a suggestion | Keeps DRAFT-06 unchanged; the banner decides | n |
+| Your-turn alert | Pulsing frame and banner on the draft screen, a short sound once, and the window title, when the player's own action is needed (their turn, a request to them, Ready in finalization) | Owner: with the full screen they forgot to act | n |
 | Lobby protocol | New draft JSON and actions; `VERSION` becomes 1.8 | CLAUDE.md: protocol changes need a version bump | y |
 
 **Open questions:** none - all resolved or logged above.
@@ -176,6 +180,44 @@ The lobby draft today works per team: a team's turn bans or picks several cars a
 
 ---
 
+### P2: Suggest bans
+
+**User Story**: As a player whose teammate is banning, I want to suggest a car to ban so that the team decides the ban together.
+
+**Why P2**: Asked by the owner after the first preview; the draft works without it.
+
+**Acceptance Criteria**:
+
+1. WHILE a ban turn of a player's team is running and the player's position is not banning, WHEN the player clicks a free car THEN the system SHALL store it as that player's ban suggestion, replacing an earlier one.
+2. WHEN the player clicks the car they suggested again THEN the system SHALL remove their suggestion.
+3. WHEN a member's lobby state is built THEN the system SHALL include the ban suggestion of each position of the member's own team and SHALL leave it empty for the other team's positions.
+4. WHEN a ban turn ends THEN the system SHALL clear every ban suggestion.
+5. IF a ban turn times out THEN the system SHALL NOT use a suggestion as the ban.
+6. The draft screen SHALL show, on the picture of a suggested car, the names of every teammate who suggested it.
+
+**Independent Test**: In a ban turn, a non-banning teammate clicks a car; the banning player sees the teammate's name on that car.
+
+---
+
+### P1: Your-turn alert
+
+**User Story**: As a player on the full-window draft, I want an unmistakable signal when I must act so that I don't miss my turn.
+
+**Why P1**: With the full screen the players forgot they had to act.
+
+**Acceptance Criteria**:
+
+1. WHILE the player's position acts in the current turn the draft screen SHALL show a pulsing colored frame around the window and a banner in the middle that names the action ("Your turn: ban 1 car" or "Your turn: pick your car") with the seconds left.
+2. WHEN the player's turn starts THEN the page SHALL play a short sound once and show "Your turn" at the start of the window title until the turn ends.
+3. WHILE a teammate's request to the player waits for an answer the draft screen SHALL show the same frame and a banner asking for the answer.
+4. WHILE finalization runs and the player is not ready the draft screen SHALL show the same frame and a banner asking to choose a skin and click Ready.
+5. WHILE a ban turn of the player's team runs and the player is not banning the draft screen SHALL tell the player they can suggest a ban by clicking a car.
+6. Every new text SHALL exist in English and in Brazilian Portuguese.
+
+**Independent Test**: Start a local draft and watch the screen, title and sound when the turn reaches you.
+
+---
+
 ## Edge Cases
 
 - IF a draft action names an unknown action THEN the system SHALL reject it with "Unknown draft action."
@@ -204,12 +246,14 @@ The lobby draft today works per team: a team's turn bans or picks several cars a
 | DRAFT-12 | P2: Trade cars | Execute | Verified |
 | DRAFT-13 | P1: Full-window draft screen | Execute | Verified |
 | DRAFT-14 | P1: Host settings and version | Execute | Verified |
+| DRAFT-15 | P2: Suggest bans | Tasks | Pending |
+| DRAFT-16 | P1: Your-turn alert | Tasks | Pending |
 
 **ID format:** `DRAFT-NN`
 
 **Status values:** Pending → In Design → In Tasks → Implementing → Verified
 
-**Coverage:** 14 total, 14 mapped to tasks, 14 verified, 0 unmapped
+**Coverage:** 16 total, 16 mapped to tasks, 14 verified, 0 unmapped
 
 ---
 

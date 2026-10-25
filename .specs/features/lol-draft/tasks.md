@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/lol-draft/design.md`
-**Status**: Done
+**Status**: In Progress (round 2: ban suggestions and the your-turn alert)
 
 ---
 
@@ -53,6 +53,12 @@ T4 → T5
 
 ```
 T6 → T7 → T8
+```
+
+### Phase 4: Ban suggestions and the your-turn alert
+
+```
+T9 → T10 → T11 → T12
 ```
 
 ---
@@ -243,14 +249,107 @@ T6 → T7 → T8
 
 ---
 
+### T9: Ban suggestions in the engine
+
+**What**: `SeatDraft` stores a ban suggestion per position (set, replace, toggle off), clears them when a ban turn ends, never uses them as the ban, and shows them only to the own team in `Json`.
+**Where**: `tools/Launcher/SeatDraft.cs`
+**Depends on**: None (runs after Phase 3)
+**Reuses**: `Mark`, `StartTurn`, `Json`
+**Requirement**: DRAFT-15
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [ ] `DraftTests` cover DRAFT-15 AC1-5
+- [ ] Gate check passes: `dotnet build tools/Launcher -c Release && dotnet test tools/Launcher.Tests`
+
+**Tests**: unit
+**Gate**: build
+
+---
+
+### T10: Suggestions on the car pictures
+
+**What**: The draft screen shows every teammate's name on the cars they suggested to ban, and a click by a non-banning player during the team's ban turn sends a suggestion.
+**Where**: `tools/Launcher/web/app.js`
+**Depends on**: T9
+**Reuses**: `dsGridHtml`, the `mark` action
+**Requirement**: DRAFT-15
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [ ] Names show on suggested cars; the hint tells non-banning players they can suggest
+- [ ] Gate check passes: `dotnet build tools/Launcher -c Release && dotnet test tools/Launcher.Tests`
+
+**Tests**: none
+**Gate**: build
+
+---
+
+### T11: Your-turn alert
+
+**What**: Pulsing frame, center banner with the action and seconds, a short sound once and the window title when the player must act (turn, request, Ready in finalization).
+**Where**: `tools/Launcher/web/app.js`
+**Depends on**: T10
+**Reuses**: `renderDraftScreen`, `style.css` draft block
+**Requirement**: DRAFT-16
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [ ] Frame, banner, sound and title behave as DRAFT-16 says
+- [ ] Gate check passes: `dotnet build tools/Launcher -c Release && dotnet test tools/Launcher.Tests`
+
+**Tests**: none
+**Gate**: build
+
+---
+
+### T12: Texts for suggestions and the alert
+
+**What**: Every new string in `i18n.js` in English and pt-BR.
+**Where**: `tools/Launcher/web/i18n.js`
+**Depends on**: T11
+**Reuses**: the `ds_*` keys
+**Requirement**: DRAFT-15, DRAFT-16
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [ ] Every new key exists in both languages
+- [ ] Gate check passes: `dotnet build tools/Launcher -c Release && dotnet test tools/Launcher.Tests`
+
+**Tests**: none
+**Gate**: build
+
+---
+
 ## Phase Execution Map
 
 ```
-Phase 1 → Phase 2 → Phase 3
+Phase 1 → Phase 2 → Phase 3 → Phase 4
 
 Phase 1:  T1 ------→ T2 ------→ T3
 Phase 2:  T4 ------→ T5
 Phase 3:  T6 ------→ T7 ------→ T8
+Phase 4:  T9 ------→ T10 -----→ T11 -----→ T12
 ```
 
 ## Task Granularity Check
