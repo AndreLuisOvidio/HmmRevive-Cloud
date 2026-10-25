@@ -89,6 +89,7 @@ namespace HmmRevive.Launcher
         internal int DraftPlanSeconds = SeatDraft.PlanSeconds, DraftFinalSeconds = SeatDraft.FinalSeconds; // tests shorten them
         public string Cooldown = ""; // seconds for every car's abilities ("0.1"), "" = the game's own (Steam build only)
         private SeatDraft _draft; // this match's draft: running (phase "draft") or done (each player drives their position's pick)
+        private bool _draftFinal; // the draft reached finalization (everyone's Ready starts over there)
         private readonly Random _rng = new Random();
         public readonly Dictionary<string, TeamSetup> Teams = new Dictionary<string, TeamSetup> { ["blue"] = new TeamSetup(), ["red"] = new TeamSetup() };
         private DateTime? _countdownEnd;
@@ -512,6 +513,7 @@ namespace HmmRevive.Launcher
             var seats = new[] { "blue", "red" }.ToDictionary(t => t, t => Players.Where(m => m.Team == t).OrderBy(_ => _rng.Next())
                 .Select(m => m.Id).Concat(Enumerable.Repeat((string)null, BotsOn(t))).ToList());
             _draft = new SeatDraft(first, seats, Catalog.Cars.Select(c => c.Id.ToString()), DraftTime, now, DraftPlanSeconds, DraftFinalSeconds);
+            _draftFinal = false;
             Phase = "draft";
             foreach (Member m in Players) m.Ready = false;
             Message = $"Draft started: the {(first == "blue" ? "Blue" : "Red")} team goes first.";
@@ -530,6 +532,13 @@ namespace HmmRevive.Launcher
             {
                 Member m = Players.FirstOrDefault(x => x.Id == s.Member);
                 if (m != null && m.Car != s.Car) { m.Car = s.Car; changed = true; }
+            }
+            if (_draft.Stage == "final" && !_draftFinal)
+            {
+                // A Ready clicked during the turns must not skip finalization (skins, trades).
+                _draftFinal = true;
+                foreach (Member m in Players) m.Ready = false;
+                changed = true;
             }
             if (_draft.Stage == "done" || (_draft.Stage == "final" && Players.Any() && Players.All(m => m.Ready)))
             {
@@ -637,8 +646,11 @@ namespace HmmRevive.Launcher
         {
             if (_draft != null)
             {
-                // Bots drive the cars picked for the bot positions (and for players who left), in position order.
-                List<string> left = _draft.Seats[team].Where(s => s.Member == null || Gone(s.Member)).Select(s => s.Car ?? "random").ToList();
+                // Bots drive the cars picked for the bot positions, then those of players who left (a bot the match
+                // adds in their place).
+                var seats = _draft.Seats[team];
+                List<string> left = seats.Where(s => s.Member == null).Concat(seats.Where(s => s.Member != null && Gone(s.Member)))
+                    .Select(s => s.Car ?? "random").ToList();
                 var drafted = Enumerable.Range(0, BotsOn(team)).Select(i => i < left.Count ? left[i] : "random").ToList();
                 return drafted.Count == 0 ? "" : string.Join(",", drafted);
             }

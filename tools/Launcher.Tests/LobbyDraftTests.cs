@@ -219,7 +219,7 @@ namespace HmmRevive.Launcher.Tests
         [Fact]
         public void FinalizationEndsByItselfWhenItsTimeIsUp()
         {
-            // The 20 s themselves are SeatDraft's (DraftTests); past 20 s the lobby would also drop the silent test players.
+            // The 20 s default is pinned in DraftTests and below; past 20 s the lobby would also drop the silent test players.
             var l = NewLobby(new[] { "Ana" }, new[] { "Edu" }, final: 5);
             l.Start();
             PlayAll(l, "Ana", "Edu");
@@ -265,6 +265,54 @@ namespace HmmRevive.Launcher.Tests
             Assert.Equal((b, a), (M(l, "Ana").Car, M(l, "Bia").Car));
         }
 
+        [Fact]
+        public void ReadyBeforeTheLastPickDoesNotSkipFinalization()
+        {
+            var l = NewLobby(new[] { "Ana" }, new[] { "Edu" });
+            l.Start();
+            l.Update(M(l, "Ana").Token, Obj("ready", true));
+            l.Update(M(l, "Edu").Token, Obj("ready", true));
+            PlayAll(l, "Ana", "Edu");
+            Assert.Equal("final", Draft(l, "Ana")["stage"]);
+            Assert.Empty(_started);
+            Assert.False(M(l, "Ana").Ready);
+        }
+
+        [Fact]
+        public void BotsKeepTheirOwnPicksWhenAPlayerLeft()
+        {
+            var l = NewLobby(new[] { "Ana", "Bia" }, new[] { "Edu" }, blueBots: 1);
+            l.Start();
+            PlayAll(l, "Ana", "Bia", "Edu");
+            var blue = SeatsOf(Draft(l, "Ana"), "blue").Cast<Dictionary<string, object>>().ToList();
+            string botCar = (string)blue.Single(s => (bool)s["bot"])["car"];
+            l.Leave(M(l, "Bia").Token);
+            l.Update(M(l, "Ana").Token, Obj("ready", true));
+            l.Update(M(l, "Edu").Token, Obj("ready", true));
+            var o = Assert.Single(_started);
+            Assert.Equal(botCar, o.BluBotCars); // one bot wanted: it drives its own pick, not Bia's
+        }
+
+        [Fact]
+        public void TheHostResetDropsTheDraft()
+        {
+            var l = NewLobby(new[] { "Ana" }, new[] { "Edu" }, plan: 15);
+            l.Start();
+            Act(l, "Ana", "swap", target: 1);
+            l.ResetDraft();
+            Assert.Equal("lobby", l.Phase);
+            Assert.Null(l.Snapshot(M(l, "Ana").Token)["draft"]);
+            Refused(Act(l, "Ana", "lock"), "No draft is running.");
+        }
+
+        [Fact]
+        public void ALobbyRefusesAPlayerOfAnotherVersion()
+        {
+            var l = NewLobby(new[] { "Ana" }, new[] { "Edu" });
+            Assert.Null(l.Join("Old", "1.7", new[] { Builds.Steam }, false, out string error));
+            Assert.Equal("The host runs HMM Revive 1.8 and you have 1.7. Everyone needs the same version.", error);
+        }
+
         // ---- DRAFT-14: host settings ----
 
         [Fact]
@@ -272,7 +320,7 @@ namespace HmmRevive.Launcher.Tests
         {
             var l = new Lobby(FreePort(), FreePort(), Builds.Steam);
             _lobbies.Add(l);
-            Assert.Equal(30, l.DraftTime);
+            Assert.Equal((30, 15, 20), (l.DraftTime, l.DraftPlanSeconds, l.DraftFinalSeconds));
             l.Configure(Obj("draft", true, "draftBans", "A3 B3", "draftPicks", "A4 B4"));
             var setup = l.SetupJson();
             Assert.False(setup.ContainsKey("draftBans"));
