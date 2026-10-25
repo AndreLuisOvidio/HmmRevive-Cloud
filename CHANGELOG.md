@@ -13,6 +13,11 @@ Newest first. The version is shown on the first line of every kit window (setup,
   once.
 - **Trades:** teammates can ask each other to swap positions (before either picks) or trade cars (after both
   picked); the other player accepts or declines within 10 s. Trading with a bot of your team needs no answer.
+- **Ban suggestions** (preview 2): while a teammate bans, click a car to suggest it (click again to take it back); your
+  team sees your name on the car. Only your team sees suggestions, and a ban is still only the banning player's choice.
+- **Your turn, impossible to miss** (preview 2): when you must act (your ban or pick, a teammate's request, Ready in
+  finalization) the window gets a pulsing frame and a banner with the action and the seconds left; your turn also plays a
+  short sound and shows "Your turn" in the window title.
 - **Your car, big:** once your pick is locked it shows in the middle with its skins; clicking a skin changes it.
   After 20 s of finalization, or once everyone is Ready, the match starts with everyone on their drafted car.
 - The host no longer writes ban/pick orders, and a turn lasts 30 s by default (was 60 s).

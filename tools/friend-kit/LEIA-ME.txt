@@ -72,7 +72,8 @@ Torneios (nas configurações da partida, só o host)
     segundos de planejamento, a posição 1 de cada time bane 1 carro, e cada jogador escolhe o próprio carro nesta
     ordem: Time 1: 1, Time 2: 2, Time 1: 2, Time 2: 1, Time 1: 1, Time 2: 1. Cada vez tem 30 segundos por padrão;
     quando o tempo acaba, o pick fica com o carro marcado (ou um aleatório) e o ban com o carro marcado (ou nenhum).
-    Colegas de time podem pedir troca de posição (antes de escolher) ou de carro (depois de escolher). Seu carro
+    Colegas de time podem pedir troca de posição (antes de escolher) ou de carro (depois de escolher), e sugerir
+    bans enquanto um colega bane (seu time vê seu nome no carro). Quando você precisa agir, a janela pisca. Seu carro
     aparece grande com as skins. A partida começa depois de 20 segundos de finalização, ou quando todos clicarem
     em Pronto.
   - "2 vagas de espectador": até duas pessoas assistem à partida com a câmera de espectador do jogo, sem carro
