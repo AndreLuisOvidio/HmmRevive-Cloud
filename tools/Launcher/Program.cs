@@ -207,7 +207,7 @@ namespace HmmRevive.Launcher
                 {
                     if (_lobby != null) return Response.Error("Close your local lobby first.");
                     LeaveLobby();
-                    string cerr = Hosting.Create(Version, d.Str("visibility"), d.Str("password"), d.Str("label"), d.Str("region"));
+                    string cerr = Hosting.Create(Version, d.Str("visibility"), d.Str("password"), d.Str("label"), d.Str("region"), d.Str("build"));
                     return cerr == null ? Ok() : Response.Error(cerr);
                 }
                 case "/api/cloud/state": return Response.Json(CloudState());

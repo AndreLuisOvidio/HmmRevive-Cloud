@@ -12,6 +12,8 @@ namespace HmmRevive.Launcher
     /// </summary>
     public sealed class CloudHostConfig
     {
+        /// <summary>The game build this lobby plays (BUILD, set by the orchestrator for a build other than Steam).</summary>
+        public string Build = Builds.Steam;
         public string LobbyId, HostToken, LobbySecret, OrchestratorUrl, Visibility = "public", Password, PublicHostname, Region;
         /// <summary>Where run-lobby.sh reports the game download (GAME_STATUS_FILE); null = the game is already in place.</summary>
         public string GameStatusFile;
@@ -34,6 +36,9 @@ namespace HmmRevive.Launcher
             };
             var missing = new[] { "LOBBY_ID", "HOST_TOKEN" }.Where(k => Get(k) == null).ToList();
             if (missing.Count > 0) { error = "Cloud host mode needs these environment variables: " + string.Join(", ", missing) + "."; return null; }
+            string build = Get("BUILD");
+            if (build != null && build != Builds.Steam && !Builds.Legacy.Contains(build)) { error = "BUILD must be a game build this launcher knows."; return null; }
+            if (build != null) c.Build = build;
             string vis = Get("VISIBILITY");
             if (vis != null && vis != "public" && vis != "private") { error = "VISIBILITY must be public or private."; return null; }
             if (vis != null) c.Visibility = vis;
@@ -86,10 +91,14 @@ namespace HmmRevive.Launcher
             return Run(cfg);
         }
 
+        /// <summary>The lobby of a cloud container: it plays the build the orchestrator started the container for.</summary>
+        public static Lobby NewLobby(CloudHostConfig cfg) =>
+            new Lobby(cfg.LobbyPort, cfg.GamePort, cfg.Build) { Cloud = true, Region = cfg.Region, ServerGame = GameDownload.FromFile(cfg.GameStatusFile) };
+
         /// <summary>Runs the lobby until the guard, the orchestrator or the host ends it; returns the process exit code (0).</summary>
         public static int Run(CloudHostConfig cfg, int tickMs = 5000)
         {
-            var lobby = new Lobby(cfg.LobbyPort, cfg.GamePort, Builds.Steam) { Cloud = true, Region = cfg.Region, ServerGame = GameDownload.FromFile(cfg.GameStatusFile) };
+            var lobby = NewLobby(cfg);
             lobby.SetHostToken(cfg.HostToken);
             lobby.SetPassword(cfg.Password);
             lobby.SetVisibility(cfg.Visibility);

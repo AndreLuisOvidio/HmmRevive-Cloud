@@ -152,6 +152,19 @@ namespace HmmRevive.Launcher.Tests
         }
 
         // CREATE-09: the region the host picked travels with the create request.
+        // BUILD-01 (AD-010): the build travels in the create request only when it is not the default.
+        [Fact]
+        public void CreateSendsTheBuildWhenItIsNotSteam()
+        {
+            var (cloud, sent) = Make(n => Ok(new Dictionary<string, object> { ["id"] = "a1b2c3" }, 202));
+            cloud.Create("1.8", "public", null, null, null, "2017sep");
+            cloud.Create("1.8", "public", null, null, null, "steam");
+            cloud.Create("1.8", "public", null, null);
+            Assert.Equal("2017sep", Js.Read(sent[0].Body).Str("build"));
+            Assert.False(Js.Read(sent[1].Body).ContainsKey("build"));
+            Assert.False(Js.Read(sent[2].Body).ContainsKey("build"));
+        }
+
         [Fact]
         public void CreateSendsTheRegionWhenOneIsPickedAndNothingWhenNot()
         {

@@ -256,7 +256,7 @@ namespace HmmRevive.Launcher
         private static Process Start(string build, List<string> args, bool hidden)
         {
             // Platform decides the program: HMM.exe on Windows, Wine on a virtual display on Linux (cloud lobbies).
-            LaunchCommand cmd = Platform.GameCommand(Builds.GameExe(build), args, Builds.Instance(build));
+            LaunchCommand cmd = Platform.GameCommand(Builds.GameExe(build), args, Builds.Instance(build), build);
             var psi = new ProcessStartInfo(cmd.FileName, cmd.Arguments)
             {
                 WorkingDirectory = cmd.WorkingDirectory,

@@ -30,6 +30,17 @@ namespace HmmRevive.Launcher.Tests
             Assert.Equal("/usr/bin/xvfb-run -a /usr/lib/wine/wine64 /opt/hmm/HMM.exe -batchmode -nographics --hmmrevive-server BeginConfig [Debug] SkipSwordfish=true EndConfig", c.Arguments);
         }
 
+        // BUILD-03 (AD-010): a 32-bit old build runs under the 32-bit Wine of its own image, not wine64.
+        [Fact]
+        public void OnLinuxAnOldBuildRunsUnderTheThirtyTwoBitWine()
+        {
+            Platform.OverrideLinux = true;
+            LaunchCommand c = Platform.GameCommand("/opt/hmm/HMM.exe", Args, "/opt/hmm", "2017sep");
+            Assert.Equal("/usr/bin/setsid", c.FileName);
+            Assert.Equal("/usr/bin/xvfb-run -a /usr/bin/wine /opt/hmm/HMM.exe -batchmode -nographics --hmmrevive-server BeginConfig [Debug] SkipSwordfish=true EndConfig", c.Arguments);
+            Assert.Contains("wine64", Platform.GameCommand("/opt/hmm/HMM.exe", Args, "/opt/hmm", Builds.Steam).Arguments);
+        }
+
         [Fact]
         public void ArgumentsWithSpacesAreQuotedOnBothSystems()
         {

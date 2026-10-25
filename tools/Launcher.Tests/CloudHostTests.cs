@@ -81,6 +81,32 @@ namespace HmmRevive.Launcher.Tests
             }
         }
 
+        // BUILD-03 (AD-010): the orchestrator names the game build in BUILD; without it the lobby is the Steam build.
+        [Fact]
+        public void TheBuildOfTheLobbyIsReadFromTheEnvironment()
+        {
+            Assert.Equal("steam", CloudHostConfig.Parse(Env(Good()), out string error).Build);
+            var env = Good();
+            env["BUILD"] = "2017sep";
+            var c = CloudHostConfig.Parse(Env(env), out error);
+            Assert.Null(error);
+            Assert.Equal("2017sep", c.Build);
+            Assert.Equal("2017sep", CloudHost.NewLobby(c).Build);
+            env["BUILD"] = "steam";
+            Assert.Equal("steam", CloudHostConfig.Parse(Env(env), out error).Build);
+        }
+
+        [Theory]
+        [InlineData("2099")]
+        [InlineData("../x")]
+        public void ABuildTheLauncherDoesNotKnowIsRefused(string build)
+        {
+            var env = Good();
+            env["BUILD"] = build;
+            Assert.Null(CloudHostConfig.Parse(Env(env), out string error));
+            Assert.Contains("BUILD", error);
+        }
+
         [Fact]
         public void TheNormalStartIsNotCloudMode()
         {
