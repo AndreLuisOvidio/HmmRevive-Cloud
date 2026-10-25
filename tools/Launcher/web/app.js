@@ -329,7 +329,6 @@ const mySkin = () => ((S.settings.skins || {})[carName(S.settings.car)] ?? "0");
 const diffName = (d) => (DIFFS().find((x) => x[0] === d) || [d, d])[1];
 const isPlayer = (m) => m.team === "blue" || m.team === "red";
 const teamName = (team) => t(team === "blue" ? "blue_short" : "red_short");
-const nCars = (n) => (n === 1 ? t("cars_1") : t("cars_n", n));
 // Draft: the cars a team picked, and the ones its players don't drive (the bots get those).
 const pool = (D, team) => (D ? D.picks.filter((c) => c.team === team).map((c) => c.car) : []);
 const botPool = (L, team) => pool(L.draft, team).filter((c) => !L.members.some((m) => m.team === team && m.car === c));

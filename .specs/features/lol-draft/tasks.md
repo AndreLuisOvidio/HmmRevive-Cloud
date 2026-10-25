@@ -212,8 +212,8 @@ T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Every `t("...")` key used by the draft view exists in both languages
-- [ ] Gate check passes: `dotnet build tools/Launcher -c Release && dotnet test tools/Launcher.Tests`
+- [x] Every `t("...")` key used by the draft view exists in both languages
+- [x] Gate check passes: `dotnet build tools/Launcher -c Release && dotnet test tools/Launcher.Tests`
 
 **Tests**: none
 **Gate**: build
