@@ -4,6 +4,8 @@ Newest first. The version is shown on the first line of every kit window (setup,
 
 ## 1.8 (unreleased): the draft, LoL style
 
+Preview 3 adds the cloud lobbies of the Sep 2017 build and the UTC clock fix, below.
+
 - **New draft** (lobby option "Draft before each match"): it takes the whole launcher window, with Team 1 and Team 2
   at the sides and the cars in the middle as pictures with their names. The team that starts and each player's
   position (1 to 4) are drawn, humans before bots. After 15 s of planning, position 1 of each team bans 1 car, then

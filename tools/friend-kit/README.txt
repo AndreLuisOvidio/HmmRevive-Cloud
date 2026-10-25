@@ -40,6 +40,8 @@ CLOUD LOBBY (no VPN, no PC that has to stay on)
     password, and the region (Brazil, United States or Europe: the one nearest to most players), then "Create cloud lobby".
     It opens in about a minute (two outside Brazil). For its first seconds the server is still getting the game ready: the
     lobby shows it, and the match starts once it is ready.
+  - If you have the September 2017 game set up too, a "Game" choice appears: the cloud server can run that old build
+    (everyone who joins needs that copy). It opens in about a minute and a half, like the current game.
   - Players find it in Play (cloud badge, lock = password) or type its code (like a1b2c3) in the join box. Joining needs no key.
   - The server is deleted a few minutes after the last player leaves, or after 3 hours. If you close the launcher meanwhile,
     Host offers "Rejoin your cloud lobby". Everyone needs the same version.

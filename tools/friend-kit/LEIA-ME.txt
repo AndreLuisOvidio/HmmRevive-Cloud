@@ -41,6 +41,8 @@ SALA NA NUVEM (sem VPN, sem PC que precise ficar ligado)
     senha opcional, e a região (Brasil, EUA ou Europa: a mais perto da maioria dos jogadores), depois "Criar sala na nuvem".
     Abre em cerca de um minuto (dois fora do Brasil). Nos primeiros segundos o servidor ainda está preparando o jogo: a sala
     mostra isso, e a partida começa quando ele fica pronto.
+  - Se você também configurou o jogo de setembro de 2017, aparece a escolha "Jogo": o servidor da nuvem pode rodar essa
+    versão antiga (quem entrar precisa dessa cópia). Ela abre em cerca de um minuto e meio, como o jogo atual.
   - Os jogadores acham a sala em Jogar (selo de nuvem, cadeado = senha) ou digitam o código (como a1b2c3) na caixa de entrar.
     Entrar não precisa de chave.
   - O servidor é apagado alguns minutos depois que o último jogador sai, ou depois de 3 horas. Se você fechar o launcher nesse
