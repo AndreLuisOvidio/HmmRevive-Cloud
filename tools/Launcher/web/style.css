@@ -434,9 +434,9 @@ body.drafting { overflow: hidden; }
 .ds-tile.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 0 14px #ff7a1a55; }
 .ds-tile.mate { border-color: #ff7a1a88; }
 .ds-tag { position: absolute; top: 3px; right: 5px; font: 700 10px var(--head); color: var(--accent); text-shadow: 0 1px 2px #000; }
-.ds-tile.banned { filter: grayscale(1) brightness(.4); }
+.ds-tile.banned .ds-pic, .ds-tile.banned .ds-nm { filter: grayscale(1) brightness(.4); } /* not the tile: its slash stays bright */
 .ds-tile.banned .ds-nm { text-decoration: line-through; }
-.ds-tile.banned::after { content: ""; position: absolute; left: -8%; right: -8%; top: 38%; height: 3px; transform: rotate(-32deg); background: var(--muted); }
+.ds-tile.banned::after { content: ""; position: absolute; left: -8%; right: -8%; top: 38%; height: 4px; transform: rotate(-32deg); background: var(--muted); }
 .ds-tile.banned.by-blue::after { background: var(--blue); }
 .ds-tile.banned.by-red::after { background: var(--red); }
 .ds-tile.picked { filter: brightness(.55) saturate(.6); }
@@ -446,7 +446,7 @@ body.drafting { overflow: hidden; }
 .ds-tile.picked.red .ds-nm { background: #ff4f4f55; }
 .ds-show { display: flex; flex-direction: column; align-items: center; gap: 12px; }
 .ds-stage {
-  position: relative; width: min(100%, 720px); aspect-ratio: 320 / 206; border-radius: 14px; overflow: hidden; display: grid; place-items: center;
+  position: relative; width: min(100%, 720px, calc((100vh - 360px) * 320 / 206)); aspect-ratio: 320 / 206; /* the skins and Ready stay on screen */ border-radius: 14px; overflow: hidden; display: grid; place-items: center;
   border: 1px solid var(--line); background: radial-gradient(60% 60% at 50% 45%, #3d8bff33, #000 75%);
 }
 .ds-stage img { width: 100%; height: 100%; object-fit: contain; mix-blend-mode: lighten; }
