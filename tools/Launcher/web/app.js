@@ -88,6 +88,8 @@ const isLegacy = (b) => !!b && b !== "steam";
 const haveBuild = (b) => (S.builds || []).includes(b || "steam");
 // Builds the host can pick. The November 2017 build stays experimental and only shows with its Settings tick, so nobody
 // picks it by accident.
+// Builds the cloud can run (AD-010); the orchestrator decides per version which are really available.
+const CLOUD_BUILDS = ["steam", "2017sep"];
 const hostBuilds = () => (S.builds || []).filter((b) => b !== "2017" || S.settings.showNov);
 
 // Fills a <select> once per option-set, and sets its value unless the user is using it.
@@ -445,7 +447,7 @@ function renderPlay() {
   else html = list.map((l) => {
     const live = l.phase !== "lobby";
     const sameVersion = l.version === S.version;
-    const build = l.build || "steam"; // cloud lobbies always play the Steam build
+    const build = l.build || "steam"; // the cloud list says which build a lobby plays (1.8)
     const canJoin = sameVersion && haveBuild(build);
     return `<div class="card">
       <div class="t">${t("someones_lobby", esc(l.host || t("someone")))}</div>
@@ -509,7 +511,13 @@ function renderCloudHost() {
   if (!$("#cloud-visibility").options.length) fill($("#cloud-visibility"), [["public", t("cloud_vis_public")], ["private", t("cloud_vis_private")]], "public");
   // The region the host used last time is the starting choice.
   fill($("#cloud-region"), REGIONS.map((r) => [r, regionName(r)]), $("#cloud-region").value || (S.settings.cloudRegion || "brazilsouth"));
+  // The game build: only builds the cloud runs and this PC has set up (the host plays in the lobby too).
+  const cloudBuilds = hostBuilds().filter((b) => CLOUD_BUILDS.includes(b));
+  $("#cloud-build-row").hidden = cloudBuilds.length < 2;
+  const cbSaved = cloudBuilds.includes(S.settings.hostBuild) ? S.settings.hostBuild : cloudBuilds[0];
+  fill($("#cloud-build"), cloudBuilds.map((b) => [b, buildName(b)]), cloudBuilds.includes($("#cloud-build").value) ? $("#cloud-build").value : cbSaved);
   const busy = C.state === "creating";
+  $("#cloud-build").disabled = busy || C.state === "ready";
   $("#cloud-region").disabled = busy || C.state === "ready";
   $("#cloud-visibility").disabled = $("#cloud-password").disabled = busy || C.state === "ready";
   let progress = "";
@@ -1146,7 +1154,7 @@ document.addEventListener("click", async (e) => {
       if (S.cloud && S.cloud.state === "ready" && S.lobby) return show("lobby");
       if (!S.cloud || !S.cloud.keySet) { toast(t("cloud_need_key")); $("#cloud-key").focus(); return; }
       awaitingCloud = true;
-      const r = await act("cloud/create", { visibility: $("#cloud-visibility").value || "public", password: $("#cloud-password").value, region: $("#cloud-region").value });
+      const r = await act("cloud/create", { visibility: $("#cloud-visibility").value || "public", password: $("#cloud-password").value, region: $("#cloud-region").value, build: $("#cloud-build").value || undefined });
       if (!r) awaitingCloud = false;
       return;
     }
@@ -1258,6 +1266,7 @@ document.addEventListener("change", async (e) => {
   }
   switch (el.id) {
     case "lang": case "s-lang": return setLang(el.value, true);
+    case "cloud-build": S.settings.hostBuild = el.value; return act("settings", { hostBuild: el.value });
     case "host-build": S.settings.hostBuild = el.value; renderHost(); return act("settings", { hostBuild: el.value });
     case "lobby-car":
       if (S.lobby && S.lobby.draft) return act("lobby/update", { car: el.value }); // drafted: a lobby choice, not a setting

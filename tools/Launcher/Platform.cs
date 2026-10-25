@@ -27,9 +27,10 @@ namespace HmmRevive.Launcher
 
         /// <summary>
         /// How to start the game with these arguments. Linux: <c>setsid</c> gives the game its own process group (so it can be
-        /// stopped without stopping the launcher), <c>xvfb-run</c> a virtual display, <c>wine64</c> runs the Windows exe.
+        /// stopped without stopping the launcher), <c>xvfb-run</c> a virtual display, <c>wine64</c> runs the Windows exe (an old
+        /// build is a 32-bit game: <c>wine</c> of the image built for it, AD-010).
         /// </summary>
-        public static LaunchCommand GameCommand(string gameExe, IEnumerable<string> args, string workingDirectory)
+        public static LaunchCommand GameCommand(string gameExe, IEnumerable<string> args, string workingDirectory, string build = null)
         {
             string tail = string.Join(" ", args.Select(Quote));
             if (!IsLinux)
@@ -37,7 +38,7 @@ namespace HmmRevive.Launcher
             return new LaunchCommand
             {
                 FileName = "/usr/bin/setsid",
-                Arguments = "/usr/bin/xvfb-run -a /usr/lib/wine/wine64 " + Quote(gameExe) + (tail.Length > 0 ? " " + tail : ""),
+                Arguments = "/usr/bin/xvfb-run -a " + (Builds.IsLegacy(build) ? "/usr/bin/wine" : "/usr/lib/wine/wine64") + " " + Quote(gameExe) + (tail.Length > 0 ? " " + tail : ""),
                 WorkingDirectory = workingDirectory,
             };
         }

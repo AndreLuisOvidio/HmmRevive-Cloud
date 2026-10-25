@@ -25,6 +25,10 @@ Newest first. The version is shown on the first line of every kit window (setup,
   time zones (Brazil and Portugal, or a server in UTC) were hours apart: the match clock showed -59:-11, the cars stayed
   at the start and abilities fired on their own. The patcher now makes the game read UTC. The server's `WATCH` line also
   shows its speed (frames and steps per second, worst frame, metres the cars moved) and logs any frame over 100 ms.
+- **Cloud lobbies of the September 2017 build:** Host > In the cloud has a "Game" choice (shown when you have the
+  Sep 2017 copy set up). The cloud server runs that game under 32-bit Wine, with the game files trimmed to 1.4 GiB, and the
+  lobby, bots and rematch work as in a local Sep 2017 lobby. The cloud list shows each lobby's game, and the admin panel
+  shows it too.
 - **Version 1.8:** the lobby protocol changed, so a 1.8 lobby refuses 1.7 players and the other way round. Cloud
   lobbies of 1.8 need the 1.8 server image.
 

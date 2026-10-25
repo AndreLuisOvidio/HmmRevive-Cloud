@@ -90,6 +90,23 @@ namespace HmmRevive.Launcher.Tests
             };
         }
 
+        // BUILD-01 (AD-010): the host's game build goes to the orchestrator; one the cloud cannot run is refused here, before any request.
+        [Fact]
+        public void CreateAsksTheCloudForTheHostsBuildAndRefusesOneItCannotRun()
+        {
+            var bodies = new List<string>();
+            _onCreateBody = b => bodies.Add(b);
+            var h = Make(Orchestrator("ready"));
+            Assert.Null(h.Create("1.8", "public", null, null, null, "2017sep"));
+            WaitFor(() => StateOf(h) == "ready");
+            Assert.Equal("2017sep", Js.Read(bodies[0]).Str("build"));
+            h.Close();
+
+            h = Make(Orchestrator("ready"));
+            Assert.Contains("game", h.Create("1.8", "public", null, null, null, "2017"));
+            Assert.Single(bodies); // nothing was asked for the refused build
+        }
+
         [Fact]
         public void CreatePollsUntilReadyThenTakesTheHostSeatWithTheToken()
         {

@@ -20,6 +20,8 @@ namespace HmmRevive.Launcher
             ["brazilsouth"] = "Brazil", ["eastus"] = "United States", ["spaincentral"] = "Europe (Madrid)",
         };
         public const string DefaultRegion = "brazilsouth";
+        /// <summary>The game builds the cloud can run (AD-010).</summary>
+        public static readonly string[] CloudBuilds = { Builds.Steam, "2017sep" };
         private static readonly TimeSpan GiveUpAfter = TimeSpan.FromMinutes(10); // the orchestrator fails a lobby at 8 minutes
 
         private readonly Func<Cloud> _cloud;
@@ -82,8 +84,10 @@ namespace HmmRevive.Launcher
         }
 
         /// <summary>Asks for a lobby and, in the background, follows it until it is ready. Returns an error for the page, or null.</summary>
-        public string Create(string version, string visibility, string password, string label, string region = null)
+        public string Create(string version, string visibility, string password, string label, string region = null, string build = null)
         {
+            build = string.IsNullOrWhiteSpace(build) ? Builds.Steam : build.Trim();
+            if (!Array.Exists(CloudBuilds, b => b == build)) return "Pick a game build from the list.";
             region = string.IsNullOrWhiteSpace(region) ? Settings.Data.Str("cloudRegion", DefaultRegion) : region.Trim().ToLowerInvariant();
             if (!Regions.ContainsKey(region)) return Fail("Pick a region from the list.");
             Dictionary<string, object> made;
@@ -96,7 +100,7 @@ namespace HmmRevive.Launcher
                 _step = "contact";
                 _started = DateTime.UtcNow;
             }
-            try { made = _cloud().Create(version, visibility, password, label, region); }
+            try { made = _cloud().Create(version, visibility, password, label, region, build); }
             catch (CloudException e) { return Fail(e.Message); }
             lock (_gate)
             {
