@@ -264,8 +264,8 @@ T9 → T10 → T11 → T12
 
 **Done when**:
 
-- [ ] `DraftTests` cover DRAFT-15 AC1-5
-- [ ] Gate check passes: `dotnet build tools/Launcher -c Release && dotnet test tools/Launcher.Tests`
+- [x] `DraftTests` cover DRAFT-15 AC1-5
+- [x] Gate check passes: `dotnet build tools/Launcher -c Release && dotnet test tools/Launcher.Tests`
 
 **Tests**: unit
 **Gate**: build

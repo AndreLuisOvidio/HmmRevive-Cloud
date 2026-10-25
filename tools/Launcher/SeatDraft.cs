@@ -19,8 +19,9 @@ namespace HmmRevive.Launcher
         public const int DefaultTurnSeconds = 30, PlanSeconds = 15, FinalSeconds = 20;
 
         /// <summary>A position. Member null = a bot. Mark = the car chosen for the current action; Intent = the car the
-        /// player plans to pick, marked outside their turn (used as the mark when their pick turn starts).</summary>
-        public class Seat { public string Member, Mark, Intent, Ban, Car; public bool Locked; }
+        /// player plans to pick, marked outside their turn (used as the mark when their pick turn starts); Suggest = the
+        /// car a teammate proposes while their team's ban turn runs (only advice for the banning player).</summary>
+        public class Seat { public string Member, Mark, Intent, Suggest, Ban, Car; public bool Locked; }
         public class Turn { public string Team; public bool Pick; public List<int> Positions; }
         /// <summary>A teammate's request to swap positions or trade cars, waiting for position To to answer.</summary>
         public class Request { public int Id; public string Kind, Team; public int From, To; public DateTime Expires; }
@@ -84,7 +85,8 @@ namespace HmmRevive.Launcher
 
         public bool Available(string car) => car != null && _cars.Contains(car) && !Seats.Values.SelectMany(s => s).Any(s => s.Ban == car || s.Car == car);
 
-        /// <summary>A player clicks a car: the mark for their current action, or else the car they plan to pick.</summary>
+        /// <summary>A player clicks a car: the mark for their current action, a ban suggestion while a teammate bans (the
+        /// same car again takes it back), or else the car they plan to pick.</summary>
         public string Mark(string team, int pos, string car)
         {
             Seat s = SeatAt(team, pos);
@@ -92,6 +94,7 @@ namespace HmmRevive.Launcher
             if (Stage == "final" || Stage == "done") return "The draft is over.";
             if (!Available(car)) return "That car is already banned or picked.";
             if (Acting(team, pos) && !s.Locked) s.Mark = car;
+            else if (Current != null && !Current.Pick && Current.Team == team) s.Suggest = s.Suggest == car ? null : car;
             else if (s.Car == null) s.Intent = car;
             return null;
         }
@@ -235,6 +238,7 @@ namespace HmmRevive.Launcher
                     ["acting"] = Acting(kv.Key, i + 1) && !s.Locked,
                     ["mark"] = kv.Key == viewerTeam ? s.Mark ?? "" : "",
                     ["intent"] = kv.Key == viewerTeam ? s.Intent ?? "" : "",
+                    ["suggest"] = kv.Key == viewerTeam ? s.Suggest ?? "" : "",
                 }).ToArray()),
                 ["bans"] = bans.ToArray(),
                 ["picks"] = picks.ToArray(),
@@ -271,6 +275,7 @@ namespace HmmRevive.Launcher
         // A pick turn starts on the car the player planned, when it's still free; a ban turn starts empty.
         private void StartTurn(DateTime now)
         {
+            foreach (Seat s in Seats.Values.SelectMany(x => x)) s.Suggest = null; // ban advice lasts one ban turn
             if (Step >= Turns.Count)
             {
                 Stage = "final";

@@ -306,6 +306,70 @@ namespace HmmRevive.Launcher.Tests
             Assert.Equal("The draft is over.", d.Mark("blue", 1, "9"));
         }
 
+        // ---- DRAFT-15: ban suggestions ----
+
+        [Fact]
+        public void ATeammateSuggestsABanAndTheLastSuggestionWins()
+        {
+            var d = Four(); // blue position 1 bans
+            Assert.Null(d.Mark("blue", 2, "7"));
+            Assert.Equal("7", Seat(d, "blue", 2).Suggest);
+            Assert.Null(Seat(d, "blue", 2).Intent); // a suggestion, not a pick plan
+            Assert.Null(d.Mark("blue", 2, "8"));
+            Assert.Equal("8", Seat(d, "blue", 2).Suggest);
+        }
+
+        [Fact]
+        public void ClickingTheSuggestedCarAgainRemovesTheSuggestion()
+        {
+            var d = Four();
+            d.Mark("blue", 3, "7");
+            Assert.Null(d.Mark("blue", 3, "7"));
+            Assert.Null(Seat(d, "blue", 3).Suggest);
+        }
+
+        [Fact]
+        public void OutsideTheTeamsBanTurnAClickIsStillAPlan()
+        {
+            var d = Four();
+            Play(d, "1"); // red bans now
+            d.Mark("blue", 2, "7");
+            Assert.Equal(("7", null), (Seat(d, "blue", 2).Intent, Seat(d, "blue", 2).Suggest));
+        }
+
+        [Fact]
+        public void SuggestionsShowOnlyToTheOwnTeam()
+        {
+            var d = Four();
+            d.Mark("blue", 2, "7");
+            Assert.Equal("7", SeatJson(d.Json("blue", T0), "blue", 2)["suggest"]);
+            foreach (string viewer in new[] { "red", "spec", null })
+                Assert.Equal("", SeatJson(d.Json(viewer, T0), "blue", 2)["suggest"]);
+        }
+
+        [Fact]
+        public void SuggestionsAreClearedWhenTheBanTurnEnds()
+        {
+            var d = Four();
+            d.Mark("blue", 2, "7");
+            d.Mark("blue", 4, "8");
+            Play(d, "1"); // blue bans: red's ban turn starts
+            Assert.All(d.Seats["blue"], s => Assert.Null(s.Suggest));
+            d.Mark("red", 3, "9");
+            Play(d, "2");
+            Assert.All(d.Seats["red"], s => Assert.Null(s.Suggest));
+        }
+
+        [Fact]
+        public void ATimedOutBanNeverUsesASuggestion()
+        {
+            var d = Four();
+            d.Mark("blue", 2, "7");
+            d.Tick(T0.AddSeconds(30), new Random(1), NoneGone);
+            Assert.Null(Seat(d, "blue", 1).Ban);
+            Assert.DoesNotContain("7", d.Seats.Values.SelectMany(s => s).Select(s => s.Ban));
+        }
+
         // ---- DRAFT-11: swap positions ----
 
         [Fact]
