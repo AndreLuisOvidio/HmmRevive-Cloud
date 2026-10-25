@@ -17,12 +17,28 @@ namespace HmmRevive.Legacy
     {
         private float _next, _gameSince = -1f;
         private bool _kicked;
+        // Server speed, in the WATCH line: Update / FixedUpdate calls per real second and game seconds per real second
+        // (under Wine the server ran slow: the car answered late). Updates are counted in Update, steps in FixedUpdate.
+        private int _frames, _steps;
+        private float _maxDt, _prevReal, _moved;
+        private readonly System.Collections.Generic.Dictionary<int, Vector3> _carPos = new System.Collections.Generic.Dictionary<int, Vector3>();
+        private float _lastReal, _lastGame;
+
+        private void FixedUpdate() { _steps++; }
 
         private void Update()
         {
             HMMHub hub = GameHubBehaviour<HMMHub>.Hub;
             if (hub == null) return;
+            _frames++;
+            float nowReal = Time.realtimeSinceStartup, gap = _prevReal > 0f ? nowReal - _prevReal : 0f;
+            _prevReal = nowReal;
+            if (gap > _maxDt) _maxDt = gap;
+            if (gap > 0.1f) Log.Info("STALL " + (Entry.ServerMode ? "server" : "client") + " frame took " + (gap * 1000f).ToString("0") + " ms");
             MatchEnd.Tick(hub);
+#if !Y2016
+            if (Entry.ServerMode) TrackCars(hub);
+#endif
             Ball.Tick(hub);
             OwnGoal.Tick(hub);
             GameState cur = hub.State != null ? hub.State.Current : null;
@@ -33,7 +49,7 @@ namespace HmmRevive.Legacy
             if (Time.realtimeSinceStartup < _next) return;
             _next = Time.realtimeSinceStartup + 5f;
             Entry.HideOwnWindows(); // test clients: Unity may show its window again
-            try { Log.Info(Line(hub, cur)); }
+            try { Log.Info(Line(hub, cur) + Speed()); }
             catch (Exception e) { Log.Info("WATCH failed: " + e.Message); }
         }
 
@@ -57,6 +73,33 @@ namespace HmmRevive.Legacy
 #else
             return hub.Players.Players.Count;
 #endif
+        }
+
+#if !Y2016
+        // Metres the cars covered since the last WATCH line (server only): frozen cars at the start of a match show up as 0.
+        private void TrackCars(HMMHub hub)
+        {
+            if (hub.Players == null) return;
+            foreach (var p in hub.Players.PlayersAndBots)
+            {
+                var car = p.CharacterInstance;
+                if (car == null) continue;
+                Vector3 pos = car.transform.position, last;
+                if (_carPos.TryGetValue(p.PlayerCarId, out last)) _moved += Vector3.Distance(pos, last);
+                _carPos[p.PlayerCarId] = pos;
+            }
+        }
+#endif
+
+        private string Speed()
+        {
+            if (!Entry.ServerMode) return "";
+            float real = Time.realtimeSinceStartup, dt = real - _lastReal;
+            string s = _lastReal > 0f && dt > 0.5f
+                ? " | speed fps=" + (_frames / dt).ToString("0.0") + " steps/s=" + (_steps / dt).ToString("0.0") + " maxFrameMs=" + (_maxDt * 1000f).ToString("0") + " carsMoved=" + _moved.ToString("0") + "m game/real=" + ((Time.time - _lastGame) / dt).ToString("0.00")
+                : "";
+            _lastReal = real; _lastGame = Time.time; _frames = 0; _steps = 0; _maxDt = 0f; _moved = 0f;
+            return s;
         }
 
         private static string Line(HMMHub hub, GameState cur)
