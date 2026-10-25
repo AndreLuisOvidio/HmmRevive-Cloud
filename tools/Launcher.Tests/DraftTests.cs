@@ -81,6 +81,13 @@ namespace HmmRevive.Launcher.Tests
         }
 
         [Fact]
+        public void PlanningLastsFifteenSecondsByDefault()
+        {
+            var d = new SeatDraft("blue", new Dictionary<string, List<string>> { ["blue"] = new List<string> { "b1" }, ["red"] = new List<string> { "r1" } }, Cars, 30, T0);
+            Assert.Equal(("plan", T0.AddSeconds(15)), (d.Stage, d.StageEnds));
+        }
+
+        [Fact]
         public void AnIntentBecomesTheMarkWhenThePickTurnStartsButNotForABan()
         {
             var d = Four(plan: 15);
@@ -157,6 +164,18 @@ namespace HmmRevive.Launcher.Tests
             Assert.Equal(step + 1, d.Step);
             Assert.Equal("4", Seat(d, "red", 1).Car);
             Assert.Equal("5", Seat(d, "red", 2).Car);
+        }
+
+        [Fact]
+        public void APositionThatLockedCannotMarkAgainInItsTurn()
+        {
+            var d = Four();
+            Play(d, "1"); Play(d, "2"); Play(d, "3");
+            d.Mark("red", 1, "4");
+            d.Lock("red", 1, T0); // red position 2 still picks
+            d.Mark("red", 1, "9");
+            Assert.Null(Seat(d, "red", 1).Mark);
+            Assert.Equal("4", Seat(d, "red", 1).Car);
         }
 
         [Fact]
@@ -447,6 +466,14 @@ namespace HmmRevive.Launcher.Tests
             Assert.Equal(("swap", 2, 3, 7), ((string)r["kind"], (int)r["from"], (int)r["to"], (int)r["secondsLeft"]));
             Assert.Empty((object[])d.Json("red", T0)["requests"]);
             Assert.Empty((object[])d.Json("spec", T0)["requests"]);
+        }
+
+        [Fact]
+        public void FinalizationLastsTwentySecondsByDefault()
+        {
+            var d = new SeatDraft("blue", new Dictionary<string, List<string>> { ["blue"] = new List<string> { "b1" }, ["red"] = new List<string> { "r1" } }, Cars, 30, T0, planSeconds: 0);
+            Play(d, "1"); Play(d, "2"); Play(d, "3"); Play(d, "4");
+            Assert.Equal(("final", T0.AddSeconds(20)), (d.Stage, d.StageEnds)); // the last lock was at T0
         }
 
         [Fact]
