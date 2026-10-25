@@ -43,6 +43,8 @@ SALA NA NUVEM (sem VPN, sem PC que precise ficar ligado)
     mostra isso, e a partida começa quando ele fica pronto.
   - Se você também configurou o jogo de setembro de 2017, aparece a escolha "Jogo": o servidor da nuvem pode rodar essa
     versão antiga (quem entrar precisa dessa cópia). Ela abre em cerca de um minuto e meio, como o jogo atual.
+  - Hospedando uma sala do jogo de setembro de 2017 no seu PC: o Windows pode pedir o firewall de novo uma vez (regra nova que
+    também libera a porta do relógio do jogo, UDP porta do jogo + 5000). Diga sim; sem ela quem entra usa o relógio próprio e pode ver -59:xx.
   - Os jogadores acham a sala em Jogar (selo de nuvem, cadeado = senha) ou digitam o código (como a1b2c3) na caixa de entrar.
     Entrar não precisa de chave.
   - O servidor é apagado alguns minutos depois que o último jogador sai, ou depois de 3 horas. Se você fechar o launcher nesse

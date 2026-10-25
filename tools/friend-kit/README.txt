@@ -42,6 +42,8 @@ CLOUD LOBBY (no VPN, no PC that has to stay on)
     lobby shows it, and the match starts once it is ready.
   - If you have the September 2017 game set up too, a "Game" choice appears: the cloud server can run that old build
     (everyone who joins needs that copy). It opens in about a minute and a half, like the current game.
+  - Hosting a Sep 2017 lobby on your own PC: Windows may ask for the firewall again once (a new rule that also lets in the
+    game clock port, UDP game port + 5000). Say yes; without it joiners run on their own clock and may see -59:xx.
   - Players find it in Play (cloud badge, lock = password) or type its code (like a1b2c3) in the join box. Joining needs no key.
   - The server is deleted a few minutes after the last player leaves, or after 3 hours. If you close the launcher meanwhile,
     Host offers "Rejoin your cloud lobby". Everyone needs the same version.
