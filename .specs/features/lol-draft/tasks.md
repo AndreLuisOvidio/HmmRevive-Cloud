@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/lol-draft/design.md`
-**Status**: In Progress
+**Status**: Done
 
 ---
 
@@ -235,8 +235,8 @@ T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Version, changelog and both kit readmes updated
-- [ ] Gate check passes: `dotnet build tools/Launcher -c Release && dotnet test tools/Launcher.Tests`
+- [x] Version, changelog and both kit readmes updated
+- [x] Gate check passes: `dotnet build tools/Launcher -c Release && dotnet test tools/Launcher.Tests`
 
 **Tests**: none
 **Gate**: build

@@ -67,10 +67,14 @@ HOST (uma pessoa, num PC que fica ligado durante a partida)
   - Clique em "Open lobby". Quem está na sua rede vê a sala em Play; os outros podem digitar o endereço que aparece na sala.
 
 Torneios (nas configurações da partida, só o host)
-  - "Draft antes de cada partida": começar a partida primeiro começa um draft. Um time sorteado começa, e os times
-    se revezam banindo carros e depois escolhendo (por padrão banimentos A1 B1, escolhas A1 B2 A2 B1 A1 B1; A = o time
-    que começa; o host pode mudar as duas). Cada turno tem 60 segundos por padrão; quando o tempo acaba o turno é
-    completado ao acaso. Depois do draft cada jogador escolhe um dos carros do time e clica em Pronto de novo.
+  - "Draft antes de cada partida": começar a partida primeiro abre o draft na janela inteira do launcher, como no
+    League of Legends. O time que começa (Time 1) e a posição de cada jogador (1 a 4) são sorteados. Depois de 15
+    segundos de planejamento, a posição 1 de cada time bane 1 carro, e cada jogador escolhe o próprio carro nesta
+    ordem: Time 1: 1, Time 2: 2, Time 1: 2, Time 2: 1, Time 1: 1, Time 2: 1. Cada vez tem 30 segundos por padrão;
+    quando o tempo acaba, o pick fica com o carro marcado (ou um aleatório) e o ban com o carro marcado (ou nenhum).
+    Colegas de time podem pedir troca de posição (antes de escolher) ou de carro (depois de escolher). Seu carro
+    aparece grande com as skins. A partida começa depois de 20 segundos de finalização, ou quando todos clicarem
+    em Pronto.
   - "2 vagas de espectador": até duas pessoas assistem à partida com a câmera de espectador do jogo, sem carro
     (clique em "Assistir" na sala). Elas podem entrar numa partida que já está rolando.
 
