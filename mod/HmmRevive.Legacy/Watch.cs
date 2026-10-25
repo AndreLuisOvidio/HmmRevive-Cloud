@@ -105,9 +105,14 @@ namespace HmmRevive.Legacy
         }
 #endif
 
+        // The game's own latency gauge (Pocketverse.NetworkTime, from its clock sync): average and worst round trip.
+        private static string Ping(HMMHub hub)
+        {
+            return hub.Clock != null ? " ping avg=" + hub.Clock.PingAvgMillis + " max=" + hub.Clock.PingMaxMillis + " ms" : "";
+        }
+
         private string Speed()
         {
-            if (!Entry.ServerMode) return "";
             float real = Time.realtimeSinceStartup, dt = real - _lastReal;
             string s = _lastReal > 0f && dt > 0.5f
                 ? " | speed fps=" + (_frames / dt).ToString("0.0") + " steps/s=" + (_steps / dt).ToString("0.0") + " maxFrameMs=" + (_maxDt * 1000f).ToString("0") + " carsMoved=" + _moved.ToString("0") + "m game/real=" + ((Time.time - _lastGame) / dt).ToString("0.00")
@@ -122,7 +127,7 @@ namespace HmmRevive.Legacy
             if (!Entry.ServerMode)
             {
                 var nc = hub.Net as NetworkClient;
-                return line + " net=" + (nc != null ? nc.State.ToString() : "-");
+                return line + " net=" + (nc != null ? nc.State.ToString() : "-") + Ping(hub);
             }
             if (hub.BombManager != null && hub.BombManager.ScoreBoard != null)
                 line += " score=" + hub.BombManager.ScoreBoard.BombScoreRed + "-" + hub.BombManager.ScoreBoard.BombScoreBlue;
