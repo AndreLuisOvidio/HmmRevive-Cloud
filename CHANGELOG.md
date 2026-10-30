@@ -62,6 +62,10 @@ preview, the launcher offers this update by itself.
   clock (negative match clock, late inputs, the game's ping gauge stuck at -1). The host's firewall rule (named
   "... + clock", you are asked once) now opens it, and cloud lobbies of the 2017 build expose it. A 2017 copy set up with
   the older patch shows "update the game" (the patch now has a revision).
+- **Cloud lobby logs:** every 30 s a cloud lobby logs its CPU, how much the CPU limit held it back, and its memory
+  (the processes apart from the file cache); when the match server ends by itself, its exit code and the end of its logs
+  are logged too. Sep 2017 cloud lobbies no longer stop the match after 10 minutes: the guard read "no game clients"
+  because the old build's mod does not count them.
 - Local lobbies work as before.
 
 ## 1.5 (2026-10-13)

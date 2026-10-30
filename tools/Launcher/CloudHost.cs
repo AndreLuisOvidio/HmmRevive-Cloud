@@ -114,11 +114,30 @@ namespace HmmRevive.Launcher
             HeartbeatFor(cfg, lobby, stop)?.Start();
 
             var guard = new CloudGuard(DateTime.UtcNow, cfg.Deadline, cfg.GuardEmpty, cfg.GuardNeverJoined, cfg.GuardMatch);
+            var exits = new ServerExitReport();
+            CgroupSample lastSample = CloudResources.Read();
+            DateTime lastSampleAt = DateTime.UtcNow;
+            if (lastSample != null) Program.Log(CloudResources.Describe(null, lastSample, 0));
             while (!stop.Wait(tickMs))
             {
-                GuardAction a = guard.Check(DateTime.UtcNow, lobby.ConnectedMembers(), lobby.Phase, Game.ServerClients(cfg.GamePort));
+                DateTime now = DateTime.UtcNow;
+                GuardAction a = guard.Check(now, lobby.ConnectedMembers(), lobby.Phase, GameClients(cfg));
                 if (a == GuardAction.StopGameServer) { Program.Log("no game client for 10 minutes: stopping the match server"); Game.StopServer(); }
                 else if (a == GuardAction.StopLobby) { Program.Log("the cloud guard ends this lobby"); stop.Set(); }
+
+                string inst = Builds.Instance(cfg.Build);
+                string exit = exits.Check(Game.Server, p => !Game.Running(p), now,
+                    System.IO.Path.Combine(inst, $"hmmrevive-server-{cfg.GamePort}.log"), System.IO.Path.Combine(inst, $"server_unity_{cfg.GamePort}.log"));
+                if (exit != null) Program.Log(exit);
+                if (lastSample != null && now - lastSampleAt >= cfg.HeartbeatInterval)
+                {
+                    CgroupSample s = CloudResources.Read();
+                    if (s != null)
+                    {
+                        Program.Log(CloudResources.Describe(lastSample, s, (now - lastSampleAt).TotalSeconds) + $" phase={lobby.Phase} members={lobby.ConnectedMembers()} gameClients={GameClients(cfg)}");
+                        lastSample = s; lastSampleAt = now;
+                    }
+                }
             }
             lobby.Close(); // stops the game server too
             Program.Log("cloud lobby closed");
@@ -132,9 +151,16 @@ namespace HmmRevive.Launcher
             {
                 Dictionary<string, object> body = lobby.Info();
                 body["members"] = lobby.ConnectedMembers();
-                body["gameClients"] = Game.ServerClients(cfg.GamePort);
+                int clients = GameClients(cfg);
+                if (clients >= 0) body["gameClients"] = clients;
                 return body;
             }, () => stop.Set(), cfg.HeartbeatInterval, Program.Log);
         }
+
+        /// <summary>
+        /// Game clients on the match server, from the mod's WATCH line; -1 = unknown. The old builds' mod does not count
+        /// them, and reading 0 there made the guard stop a running match after 10 minutes, so for them the guard skips that check.
+        /// </summary>
+        internal static int GameClients(CloudHostConfig cfg) => Builds.IsLegacy(cfg.Build) ? -1 : Game.ServerClients(cfg.GamePort, cfg.Build);
     }
 }

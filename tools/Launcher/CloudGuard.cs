@@ -37,7 +37,7 @@ namespace HmmRevive.Launcher
 
         /// <param name="members">people connected to the lobby right now (the host included)</param>
         /// <param name="phase">the lobby phase: "lobby", "draft", "starting" or "playing"</param>
-        /// <param name="gameClients">game clients connected to the match server</param>
+        /// <param name="gameClients">game clients connected to the match server; -1 = unknown (old builds), never stops a match</param>
         public GuardAction Check(DateTime now, int members, string phase, int gameClients)
         {
             if (now - _start >= Deadline || (_deadline != null && now >= _deadline.Value)) return GuardAction.StopLobby; // whatever is going on, even a match

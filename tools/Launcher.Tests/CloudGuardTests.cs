@@ -9,6 +9,21 @@ namespace HmmRevive.Launcher.Tests
         private static readonly DateTime T0 = new DateTime(2026, 10, 18, 12, 0, 0, DateTimeKind.Utc);
         private static DateTime At(double seconds) => T0.AddSeconds(seconds);
 
+        // An old build's mod does not count game clients (-1): a match must not stop after 10 minutes for that.
+        [Fact]
+        public void UnknownGameClientsNeverStopTheMatch()
+        {
+            var g = new CloudGuard(T0);
+            for (int s = 10; s <= 30 * 60; s += 5)
+                Assert.Equal(GuardAction.Continue, g.Check(At(s), 4, "playing", -1));
+        }
+
+        [Fact]
+        public void AnOldBuildLobbyReportsUnknownGameClients()
+        {
+            Assert.Equal(-1, CloudHost.GameClients(new CloudHostConfig { Build = Builds.Legacy[0] }));
+        }
+
         // COST-01: empty for 180 s after having had members.
         [Fact]
         public void EmptyFor179SecondsKeepsRunningAndFor180Stops()
