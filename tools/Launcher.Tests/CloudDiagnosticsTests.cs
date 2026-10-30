@@ -31,6 +31,7 @@ namespace HmmRevive.Launcher.Tests
             _files["/sys/fs/cgroup/memory.current"] = "2147483648\n";
             _files["/sys/fs/cgroup/memory.peak"] = "3221225472\n";
             _files["/sys/fs/cgroup/memory.events"] = "low 0\nhigh 0\nmax 3\noom 1\noom_kill 1\n";
+            _files["/sys/fs/cgroup/memory.stat"] = "anon 1610612736\nfile 536870912\n";
             _files["/proc/12/status"] = "Name:\tHMM.exe\nVmRSS:\t 2097152 kB\n";
             _files["/proc/7/status"] = "Name:\tmono\nVmRSS:\t  102400 kB\n";
 
@@ -38,6 +39,7 @@ namespace HmmRevive.Launcher.Tests
             Assert.Equal(90000000, s.CpuUsec);
             Assert.Equal(250, s.ThrottledPeriods);
             Assert.Equal(1, s.OomKills);
+            Assert.Equal(1610612736L, s.AnonBytes);
             Assert.Equal("HMM.exe", s.TopName);
             Assert.Equal(2147483648L, s.TopRssBytes);
         }
@@ -49,12 +51,14 @@ namespace HmmRevive.Launcher.Tests
             _files["/sys/fs/cgroup/cpu/cpu.stat"] = "nr_periods 10\nnr_throttled 2\nthrottled_time 300000000\n";
             _files["/sys/fs/cgroup/memory/memory.usage_in_bytes"] = "1073741824\n";
             _files["/sys/fs/cgroup/memory/memory.oom_control"] = "oom_kill_disable 0\nunder_oom 0\noom_kill 2\n";
+            _files["/sys/fs/cgroup/memory/memory.stat"] = "cache 10\nrss 5\ntotal_cache 20\ntotal_rss 536870912\n";
 
             CgroupSample s = CloudResources.Read();
             Assert.Equal(5000000, s.CpuUsec);
             Assert.Equal(300000, s.ThrottledUsec);
             Assert.Equal(2, s.OomKills);
             Assert.Equal(-1, s.MemPeakBytes);
+            Assert.Equal(536870912L, s.AnonBytes);
         }
 
         [Fact]
@@ -65,10 +69,10 @@ namespace HmmRevive.Launcher.Tests
         {
             var a = new CgroupSample { CpuUsec = 10000000, Periods = 1000, ThrottledPeriods = 100, ThrottledUsec = 1000000, MemBytes = 1L << 30 };
             var b = new CgroupSample { CpuUsec = 10000000 + 57000000, Periods = 1300, ThrottledPeriods = 220, ThrottledUsec = 4500000,
-                MemBytes = 3L << 30, MemPeakBytes = 3L << 30, OomKills = 0, TopName = "HMM.exe", TopRssBytes = 2L << 30 };
+                MemBytes = 3L << 30, AnonBytes = 2L << 30, MemPeakBytes = 3L << 30, OomKills = 0, TopName = "HMM.exe", TopRssBytes = 2L << 30 };
 
             string line = CloudResources.Describe(a, b, 30);
-            Assert.Equal("resources: cpu=1.90 cores throttled=40% (3.5 s) mem=3.00 GB peak=3.00 GB oomKills=0 top=HMM.exe 2.00 GB", line);
+            Assert.Equal("resources: cpu=1.90 cores throttled=40% (3.5 s) mem=3.00 GB anon=2.00 GB peak=3.00 GB oomKills=0 top=HMM.exe 2.00 GB", line);
         }
     }
 

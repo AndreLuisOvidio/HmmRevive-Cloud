@@ -11,6 +11,7 @@ namespace HmmRevive.Launcher
     {
         public long CpuUsec, Periods, ThrottledPeriods, ThrottledUsec; // cumulative since the container started
         public long MemBytes, MemPeakBytes = -1, OomKills = -1;          // -1 = the kernel does not say
+        public long AnonBytes = -1;                                      // process memory without the file cache, -1 = unknown
         public string TopName; public long TopRssBytes;                  // the biggest process (HMM.exe under Wine)
     }
 
@@ -49,6 +50,8 @@ namespace HmmRevive.Launcher
             string peak = ReadFile("/sys/fs/cgroup/memory.peak"), events = ReadFile("/sys/fs/cgroup/memory.events");
             if (peak != null) s.MemPeakBytes = Num(peak);
             if (events != null) s.OomKills = Get(Keyed(events), "oom_kill");
+            string stat = ReadFile("/sys/fs/cgroup/memory.stat");
+            if (stat != null) s.AnonBytes = Get(Keyed(stat), "anon", -1);
             return s;
         }
 
@@ -66,6 +69,8 @@ namespace HmmRevive.Launcher
             string peak = ReadFile("/sys/fs/cgroup/memory/memory.max_usage_in_bytes"), oom = ReadFile("/sys/fs/cgroup/memory/memory.oom_control");
             if (peak != null) s.MemPeakBytes = Num(peak);
             if (oom != null) s.OomKills = Get(Keyed(oom), "oom_kill", -1);
+            string stat = ReadFile("/sys/fs/cgroup/memory/memory.stat");
+            if (stat != null) s.AnonBytes = Get(Keyed(stat), "total_rss", -1);
             return s;
         }
 
@@ -90,6 +95,8 @@ namespace HmmRevive.Launcher
             string line = "resources: cpu=" + (seconds > 0 ? (cpu / 1e6 / seconds).ToString("0.00", inv) : "?") + " cores"
                 + " throttled=" + (periods > 0 ? (100.0 * thrP / periods).ToString("0", inv) : "0") + "% (" + (thrUs / 1e6).ToString("0.0", inv) + " s)"
                 + " mem=" + Gb(cur.MemBytes);
+            // mem counts the file cache (the game's files right after the download); anon is what the processes hold.
+            if (cur.AnonBytes >= 0) line += " anon=" + Gb(cur.AnonBytes);
             if (cur.MemPeakBytes >= 0) line += " peak=" + Gb(cur.MemPeakBytes);
             if (cur.OomKills >= 0) line += " oomKills=" + cur.OomKills;
             if (cur.TopName != null) line += " top=" + cur.TopName + " " + Gb(cur.TopRssBytes);
