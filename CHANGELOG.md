@@ -51,7 +51,18 @@ preview, the launcher offers this update by itself.
 - **Server preparing the game:** a cloud lobby opens while its server is still getting the game ready (a few seconds to half a
   minute). Everyone in the lobby sees a notice with the progress, can already pick team and car and get ready, and the match
   starts as soon as the game is ready. If the server cannot get the game, the lobby says so and closes a minute later.
-- Local lobbies work as before. The Steam build only: the cloud server runs the same game server as the local one.
+- **Cloud lobbies of the September 2017 build:** Host > In the cloud has a "Game" choice (shown when you have the Sep 2017
+  copy set up). The cloud server runs that game under 32-bit Wine, and the lobby, bots and rematch work as in a local Sep 2017
+  lobby. The Play list shows each cloud lobby's game.
+- **September 2017 build, in another time zone:** the game's clock was local time, so a host and a player in different time
+  zones (Brazil and Portugal, or a server in UTC) were hours apart: the match clock showed -59:-11, the cars stayed at the
+  start and abilities fired on their own. The patcher now makes the game read UTC, on the server and the clients alike.
+- **Clock sync of the 2017 game:** the old game keeps its clock in step with the server over a second UDP port, the game
+  port + 5000 (14696 for 9696). The Windows Firewall rule of a local host did not let it in, so players ran on their own
+  clock (negative match clock, late inputs, the game's ping gauge stuck at -1). The host's firewall rule (named
+  "... + clock", you are asked once) now opens it, and cloud lobbies of the 2017 build expose it. A 2017 copy set up with
+  the older patch shows "update the game" (the patch now has a revision).
+- Local lobbies work as before.
 
 ## 1.5 (2026-10-13)
 

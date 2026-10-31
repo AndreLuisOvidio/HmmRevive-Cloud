@@ -5,7 +5,7 @@ using Xunit;
 
 namespace HmmRevive.Launcher.Tests
 {
-    // A copy set up by an older patcher keeps the same mod version string (1.8), so the version alone cannot say it must be
+    // A copy set up by an older patcher keeps the same mod version string, so the version alone cannot say it must be
     // set up again. 1.8 preview 3 changed the patch (the game's clock reads UTC): players who updated from a preview 2 and
     // did not set the copy up again sat at a -59:xx match clock in a cloud lobby.
     public class BuildsPatchRevisionTests : IDisposable

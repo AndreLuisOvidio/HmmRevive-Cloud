@@ -64,8 +64,8 @@ namespace HmmRevive.Launcher
         }
 
         /// <summary>The patch revision an old build's copy must have (tools/Patcher/Legacy.cs writes it to
-        /// HMM_Data/Managed/hmmrevive-patch.txt). The mod version cannot tell a copy patched by an older Patcher: 1.8 preview 3
-        /// changed the patch (the game's clock reads UTC) under the same 1.8. Revision 1 is a copy with no marker.</summary>
+        /// HMM_Data/Managed/hmmrevive-patch.txt). The mod version cannot tell a copy patched by an older Patcher: the UTC clock
+        /// changed the patch under the same version. Revision 1 is a copy with no marker.</summary>
         public const int LegacyPatchRevision = 2;
 
         public static int InstancePatchRevision(string build)
